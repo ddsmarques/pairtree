@@ -9,7 +9,7 @@ void DataSet::addSample(Sample& s) {
 }
 
 AttributeType DataSet::getAttributeType(int64_t index) {
-  //ENFORCE(index < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(index >= 0 && index < attribInfo_.size(), "Index out of bounds");
   return attribInfo_[index].first;
 }
 
@@ -47,7 +47,7 @@ void DataSet::addAttribute(Attribute<std::string>& newAttribute) {
 
 template <>
 int64_t DataSet::getValueInx(int64_t attribInx, int64_t value) {
-  //ENFORCE(attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
     return intAttributes_[attribInfo_[attribInx].second].getInx(value);
   }
@@ -56,7 +56,7 @@ int64_t DataSet::getValueInx(int64_t attribInx, int64_t value) {
 
 template <>
 int64_t DataSet::getValueInx(int64_t attribInx, double value) {
-  //ENFORCE(attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
     return doubleAttributes_[attribInfo_[attribInx].second].getInx(value);
   }
@@ -65,7 +65,7 @@ int64_t DataSet::getValueInx(int64_t attribInx, double value) {
 
 template <>
 int64_t DataSet::getValueInx(int64_t attribInx, std::string value) {
-  //ENFORCE(attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::STRING) {
     return stringAttributes_[attribInfo_[attribInx].second].getInx(value);
   }
@@ -73,7 +73,7 @@ int64_t DataSet::getValueInx(int64_t attribInx, std::string value) {
 }
 
 int64_t DataSet::getAttributeSize(int64_t attribInx) {
-  //ENFORCE(attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
     return intAttributes_[attribInfo_[attribInx].second].getSize();
   } else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
@@ -84,7 +84,7 @@ int64_t DataSet::getAttributeSize(int64_t attribInx) {
 }
 
 int64_t DataSet::getAttributeFrequency(int64_t attribInx, int64_t valueInx) {
-  //ENFORCE(attribInx < attribInfo_.size(), "Out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
     return intAttributes_[attribInfo_[attribInx].second].getFrequency(valueInx);
   }
@@ -95,4 +95,3 @@ int64_t DataSet::getAttributeFrequency(int64_t attribInx, int64_t valueInx) {
     return stringAttributes_[attribInfo_[attribInx].second].getFrequency(valueInx);
   }
 }
-
