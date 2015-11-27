@@ -1,6 +1,8 @@
 #pragma once
 #include "ErrorUtils.h"
 
+#include <algorithm>
+
 template <typename T>
 Attribute<T>::Attribute(AttributeType attType)
   : type_(attType), lastInx_(0) {}
@@ -52,4 +54,25 @@ template <typename T>
 int64_t Attribute<T>::getFrequency(int64_t index) {
   ErrorUtils::enforce(index >= 0 && index < frequency_.size(), "getFrequency(): Out of bounds");
   return frequency_[index];
+}
+
+template <typename T>
+void Attribute<T>::sortIndexes() {
+  std::vector<T> order(valueInx_.size());
+  int64_t count = 0;
+  for (auto it : valueInx_) {
+    order[count++] = it.second;
+  }
+  std::sort(order.begin(), order.end());
+
+  std::map<T, int64_t> newValueInx;
+  std::vector<int64_t> newFrequency(order.size());
+  for (int64_t i = 0; i < order.size(); i++) {
+    newValueInx[order[i]] = i;
+    newFrequency[i] = frequency_[valueInx_[order[i]]];
+  }
+
+  inxValue_ = order;
+  valueInx_ = newValueInx;
+  frequency_ = newFrequency;
 }

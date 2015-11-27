@@ -44,6 +44,7 @@ void DataSetBuilder::createAttribute(int col, std::vector<std::vector<std::strin
     for (int i = 1; i < rawFile.size(); i++) if (col < rawFile[i].size()) {
       attrib->addValue(Converter::fromString<int64_t>(rawFile[i][col]));
     }
+    attrib->sortIndexes();
     ds.addAttribute<int64_t>(attrib);
   } else if (colType == AttributeType::DOUBLE) {
     std::shared_ptr<Attribute<double>> attrib = std::make_shared<Attribute<double>>(AttributeType::DOUBLE);
@@ -52,6 +53,7 @@ void DataSetBuilder::createAttribute(int col, std::vector<std::vector<std::strin
     for (int i = 1; i < rawFile.size(); i++) if (col < rawFile[i].size()) {
       attrib->addValue(Converter::fromString<double>(rawFile[i][col]));
     }
+    attrib->sortIndexes();
     ds.addAttribute<double>(attrib);
   } else {
     std::shared_ptr<Attribute<std::string>> attrib = std::make_shared<Attribute<std::string>>(AttributeType::STRING);
@@ -60,6 +62,7 @@ void DataSetBuilder::createAttribute(int col, std::vector<std::vector<std::strin
     for (int i = 1; i < rawFile.size(); i++) if (col < rawFile[i].size()) {
       attrib->addValue(rawFile[i][col]);
     }
+    attrib->sortIndexes();
     ds.addAttribute<std::string>(attrib);
   }
 }
