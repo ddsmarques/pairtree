@@ -29,7 +29,6 @@ DataSet DataSetBuilder::buildFromFile(std::string fileName) {
         s.inxValue_[j] = ds.getValueInx(j, rawFile[i][j]);
       }
     }
-    //std::cout << rawFile[i][rawFile[i].size() - 1] << std::endl;
     s.benefit_[s.inxValue_[ds.getTotAttributes() - 1]] = 1;
     ds.addSample(s);
   }
@@ -38,7 +37,6 @@ DataSet DataSetBuilder::buildFromFile(std::string fileName) {
 
 void DataSetBuilder::createAttribute(int col, std::vector<std::vector<std::string>>&& rawFile, DataSet& ds) {
   auto colType = getAttributeType(col, std::forward<std::vector<std::vector<std::string>>&&>(rawFile));
-  //auto colType = getAttributeType(col, rawFile);
   if (colType == AttributeType::INTEGER) {
     Attribute<int64_t> attrib(AttributeType::INTEGER);
 

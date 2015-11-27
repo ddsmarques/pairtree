@@ -30,7 +30,7 @@ int64_t Attribute<T>::getInx(T value) {
 template <typename T>
 T Attribute<T>::getValue(int64_t index) {
   ErrorUtils::enforce(index >= 0 && index < inxValue_.size(), "getValue(): Out of bounds");
-  return inxValue_[index]; // std::move???
+  return inxValue_[index];
 }
 
 template <typename T>

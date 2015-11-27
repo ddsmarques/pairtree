@@ -11,6 +11,4 @@ public:
   static bool isDouble(const std::string& str);
   template <typename T>
   static T fromString(const std::string& str);
-  template <typename T>
-  static std::string toString(const T& x);
 };

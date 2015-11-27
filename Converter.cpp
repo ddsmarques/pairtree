@@ -44,8 +44,3 @@ double Converter::fromString<double>(const std::string& str) {
   ErrorUtils::enforce(Converter::isDouble(str), "Not a valid double");
   return std::stod(str);
 }
-
-template <>
-static std::string Converter::toString(const int64_t& x) {
-  return std::to_string(x);
-}
