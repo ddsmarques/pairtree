@@ -17,13 +17,17 @@ void DecisionTreeNode::addChild(std::shared_ptr<DecisionTreeNode> child, std::ve
   }
 }
 
-int64_t DecisionTreeNode::classify(const Sample& s) {
-  ErrorUtils::enforce(attribCol_ < s.inxValue_.size(), "Sample doesn't have the required column");
-  auto next = children_.find(s.inxValue_[attribCol_]);
+int64_t DecisionTreeNode::classify(std::shared_ptr<Sample> s) {
+  if (type_ == NodeType::LEAF) {
+    return leafValue_;
+  }
+
+  ErrorUtils::enforce(attribCol_ < s->inxValue_.size(), "Sample doesn't have the required column");
+  auto next = children_.find(s->inxValue_[attribCol_]);
   if (next == children_.end()) {
     return -1;
   }
-  return children_[s.inxValue_[attribCol_]]->classify(s);
+  return children_[s->inxValue_[attribCol_]]->classify(s);
 }
 
 void DecisionTreeNode::setName(std::string name) {

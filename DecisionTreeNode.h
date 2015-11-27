@@ -25,7 +25,7 @@ public:
 
   void addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v);
 
-  int64_t classify(const Sample& s);
+  int64_t classify(std::shared_ptr<Sample> s);
 
 private:
   std::string name_;

@@ -5,6 +5,7 @@
 #include "gurobi_c++.h"
 #include "Attribute.h"
 #include "GreedyTree.h"
+#include "Tester.h"
 
 int main() {
   ReadCSV reader;
@@ -16,8 +17,8 @@ int main() {
     std::cout << std::endl;
   }
   DataSetBuilder builder;
-  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
-  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
+  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
+  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
   for (auto s : ds.samples_) {
     for (auto i : s->inxValue_) {
       std::cout << i << " ";
@@ -27,12 +28,16 @@ int main() {
   
   PineTree pt;
   pt.createBackBone(ds, 2, PineTree::SolverType::INTEGER);
-  auto root = pt.mountBackbone(ds);
-  root->printNode();
+  auto ptNode = pt.mountBackbone(ds);
+  ptNode->printNode();
 
   GreedyTree gt;
-  auto g = gt.createBackBone(ds, 3);
-  g->printNode();
+  auto gtNode = gt.createBackBone(ds, 2);
+  gtNode->printNode();
+
+  Tester tester;
+  tester.test(ptNode, ds);
+  tester.test(gtNode, ds);
   system("pause");
   return 0;
 }
