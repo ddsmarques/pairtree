@@ -112,7 +112,7 @@ void PineTree::createObjFunction(DataSet& ds) {
       for (int64_t c = 0; c < totClasses_; c++) {
         int64_t e = 0;
         for (auto s : ds.samples_) {
-          objFun += s.benefit_[c] * V_[e][c][j][h];
+          objFun += s->benefit_[c] * V_[e][c][j][h];
           e++;
         }
       }
@@ -122,7 +122,7 @@ void PineTree::createObjFunction(DataSet& ds) {
   for (int64_t c = 0; c < totClasses_; c++) {
     int64_t e = 0;
     for (auto s : ds.samples_) {
-      objFun += s.benefit_[c] * L_[e][c];
+      objFun += s->benefit_[c] * L_[e][c];
       e++;
     }
   }
@@ -159,7 +159,7 @@ void PineTree::createConstraints(DataSet& ds) {
     GRBLinExpr expr;
     expr += Z_[e][0];
     for (int64_t i = 0; i < totAttributes_ - 1; i++) {
-      if (s.inxValue_[i] != bbValue_[i]) {
+      if (s->inxValue_[i] != bbValue_[i]) {
         expr += -1 * X_[i][0];
       }
     }
@@ -170,7 +170,7 @@ void PineTree::createConstraints(DataSet& ds) {
       expr.clear();
       expr += Z_[e][j];
       for (int64_t i = 0; i < totAttributes_ - 1; i++) {
-        if (s.inxValue_[i] != bbValue_[i]) {
+        if (s->inxValue_[i] != bbValue_[i]) {
           expr += -1 * X_[i][j];
         }
       }
@@ -189,7 +189,7 @@ void PineTree::createConstraints(DataSet& ds) {
         GRBLinExpr expr;
         expr += Z_[e][j];
         for (int64_t i = 0; i < totAttributes_ - 1; i++) {
-          if (s.inxValue_[i] != bbValue_[i]) {
+          if (s->inxValue_[i] != bbValue_[i]) {
             expr += X_[i][k];
           }
         }
@@ -259,7 +259,7 @@ void PineTree::createConstraints(DataSet& ds) {
           expr += V_[e][c][j][h];
         }
         for (int64_t i = 0; i < totAttributes_ - 1; i++) {
-          if (s.inxValue_[i] == h) {
+          if (s->inxValue_[i] == h) {
             expr += -1 * X_[i][j];
           }
         }
@@ -302,7 +302,7 @@ void PineTree::createConstraints(DataSet& ds) {
         expr += L_[e][c];
       }
       for (int64_t i = 0; i < totAttributes_ - 1; i++) {
-        if (s.inxValue_[i] != bbValue_[i]) {
+        if (s->inxValue_[i] != bbValue_[i]) {
           expr += X_[i][j];
         }
       }

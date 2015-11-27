@@ -4,6 +4,7 @@
 #include "PineTree.h"
 #include "gurobi_c++.h"
 #include "Attribute.h"
+#include "GreedyTree.h"
 
 int main() {
   ReadCSV reader;
@@ -15,10 +16,10 @@ int main() {
     std::cout << std::endl;
   }
   DataSetBuilder builder;
-  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
-  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
+  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
+  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
   for (auto s : ds.samples_) {
-    for (auto i : s.inxValue_) {
+    for (auto i : s->inxValue_) {
       std::cout << i << " ";
     }
     std::cout << std::endl;
@@ -28,6 +29,10 @@ int main() {
   pt.createBackBone(ds, 2, PineTree::SolverType::INTEGER);
   auto root = pt.mountBackbone(ds);
   root->printNode();
+
+  GreedyTree gt;
+  auto g = gt.createBackBone(ds, 3);
+  g->printNode();
   system("pause");
   return 0;
 }

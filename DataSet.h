@@ -5,6 +5,7 @@
 #pragma once
 #include <list>
 #include <vector>
+#include <memory>
 
 #include "Attribute.h"
 #include "Sample.h"
@@ -14,9 +15,9 @@ class DataSet {
 public:
   DataSet();
   template <typename T>
-  void addAttribute(Attribute<T>& newAttribute);
+  void addAttribute(std::shared_ptr<Attribute<T>> newAttribute);
 
-  void addSample(Sample& s);
+  void addSample(std::shared_ptr<Sample> s);
 
   AttributeType getAttributeType(int64_t index);
 
@@ -31,11 +32,13 @@ public:
 
   int64_t getAttributeFrequency(int64_t attribInx, int64_t valueInx);
 
-  std::list<Sample> samples_;
+  void initAllAttributes(DataSet& ds);
+
+  std::list<std::shared_ptr<Sample>> samples_;
 
 private:
-  std::vector<Attribute<int64_t>> intAttributes_;
-  std::vector<Attribute<double>> doubleAttributes_;
-  std::vector<Attribute<std::string>> stringAttributes_;
+  std::vector<std::shared_ptr<Attribute<int64_t>>> intAttributes_;
+  std::vector<std::shared_ptr<Attribute<double>>> doubleAttributes_;
+  std::vector<std::shared_ptr<Attribute<std::string>>> stringAttributes_;
   std::vector<std::pair<AttributeType, int64_t>> attribInfo_;
 };
