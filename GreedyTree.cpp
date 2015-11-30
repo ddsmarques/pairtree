@@ -15,22 +15,11 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createBackBoneRec(DataSet& ds, int
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
   if (bbSize == 1) {
-    std::vector<double> classScore(ds.getTotClasses());
-    for (auto s : ds.samples_) {
-      for (int64_t i = 0; i < classScore.size(); i++) {
-        classScore[i] += s->benefit_[i];
-      }
-    }
-    int64_t best = 0;
-    for (int64_t i = 1; i < classScore.size(); i++) {
-      if (classScore[i] > classScore[best]) {
-        best = i;
-      }
-    }
+    auto best = ds.getBestClass();
 
     std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
-    leaf->setName("LEAF " + std::to_string(best));
-    leaf->setLeafValue(best);
+    leaf->setName("LEAF " + std::to_string(best.first));
+    leaf->setLeafValue(best.first);
 
     return leaf;
   }
@@ -55,7 +44,7 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createBackBoneRec(DataSet& ds, int
   for (int64_t i = 0; i < bestAttribSize; i++) {
     allDS[i].initAllAttributes(ds);
   }
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     allDS[s->inxValue_[bestAttrib]].addSample(s);
   }
 

@@ -60,7 +60,7 @@ template <typename T>
 void Attribute<T>::sortIndexes() {
   std::vector<T> order(valueInx_.size());
   int64_t count = 0;
-  for (auto it : valueInx_) {
+  for (const auto& it : valueInx_) {
     order[count++] = it.first;
   }
   std::sort(order.begin(), order.end(), &Attribute<T>::lessThan);
@@ -81,7 +81,7 @@ template <typename T>
 void Attribute<T>::print() {
   std::cout << "Attribute " << name_ << std::endl;
   std::cout << "valueInx_:" << std::endl;
-  for (auto it : valueInx_) {
+  for (const auto& it : valueInx_) {
     std::cout << it.first << " " << it.second << std::endl;
   }
   std::cout << "frequency_:" << std::endl;

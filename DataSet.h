@@ -36,6 +36,10 @@ public:
 
   DataSet getSubDataSet(int64_t attribInx, int64_t valueInx);
 
+  std::pair<int64_t, double> getBestClass();
+
+  double getClassBenefit(int64_t classInx);
+
   std::list<std::shared_ptr<Sample>> samples_;
 
 private:

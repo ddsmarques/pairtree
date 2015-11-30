@@ -12,21 +12,12 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
                                                         int64_t height,
                                                         SolverType type) {
   if (height == 0) {
-    int64_t bestInx = -1;
-    double bestScore = 0;
-    for (int64_t i = 0; i < ds.getTotClasses(); i++) {
-      double score = 0;
-      for (auto s : ds.samples_) {
-        score += s->benefit_[i];
-      }
-      if (bestInx == -1 || score > bestScore) {
-        bestInx = i;
-        bestScore = score;
-      }
-    }
+    auto best = ds.getBestClass();
+    ErrorUtils::enforce(best.first >= 0, "Invalid class index");
+
     std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
-    leaf->setName("LEAF " + std::to_string(bestInx));
-    leaf->setLeafValue(bestInx);
+    leaf->setName("LEAF " + std::to_string(best.first));
+    leaf->setLeafValue(best.first);
 
     return leaf;
   }
@@ -38,10 +29,9 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
   while (node != nullptr && !node->isLeaf()) {
     auto next = getNextNodeBB(node);
 
-    for (auto child : node->children_) {
+    for (auto&& child : node->children_) {
       if (child.second->isLeaf()) {
-        //child.second = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), height-1, type);
-        node->children_[child.first] = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), height - count - 1, type);
+        child.second = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), height - count - 1, type);
       }
     }
 
@@ -156,7 +146,7 @@ void PineTree::createObjFunction(DataSet& ds, int64_t bbSize) {
     for (int64_t h = 0; h < maxAttribSize_; h++) {
       for (int64_t c = 0; c < totClasses_; c++) {
         int64_t e = 0;
-        for (auto s : ds.samples_) {
+        for (const auto& s : ds.samples_) {
           objFun += s->benefit_[c] * V_[e][c][j][h];
           e++;
         }
@@ -166,7 +156,7 @@ void PineTree::createObjFunction(DataSet& ds, int64_t bbSize) {
   // Contribution from all samples put on the backbone by the last node
   for (int64_t c = 0; c < totClasses_; c++) {
     int64_t e = 0;
-    for (auto s : ds.samples_) {
+    for (const auto& s : ds.samples_) {
       objFun += s->benefit_[c] * L_[e][c];
       e++;
     }
@@ -198,7 +188,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Constraint Z 1
   // Guarantees sample e will be put out of the backbone by the attribute chosen in node j
   int64_t e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     // j = 0 is treated seperately
     GRBLinExpr expr;
     expr += Z_[e][0];
@@ -227,7 +217,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Constraint Z 2
   // Guarantees sample e was not put out of the backbone by attributes in previous nodes (less than j)
   e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     for (int64_t j = 0; j < bbSize; j++) {
       for (int64_t k = 0; k < j; k++) {
         GRBLinExpr expr;
@@ -259,7 +249,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Constraint V 1
   // V[e][c][j][h] must be limited above by Z[e][j]
   e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     for (int64_t j = 0; j < bbSize; j++) {
       GRBLinExpr expr;
       for (int64_t c = 0; c < totClasses_; c++) {
@@ -277,7 +267,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Constraint V 2
   // V[e][c][j][h] must be limited above by W[c][j][h]
   e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     for (int64_t c = 0; c < totClasses_; c++) {
       for (int64_t j = 0; j < bbSize; j++) {
         for (int64_t h = 0; h < maxAttribSize_; h++) {
@@ -295,7 +285,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
 
   // Constraint V 3
   e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     for (int64_t j = 0; j < bbSize; j++) {
       for (int64_t h = 0; h < maxAttribSize_; h++) {
         GRBLinExpr expr;
@@ -325,7 +315,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Constraint L 1
   // L[e][c] <= Y[c]
   e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     for (int64_t c = 0; c < totClasses_; c++) {
       GRBLinExpr expr;
       expr += L_[e][c];
@@ -340,7 +330,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // L[e][c] > 0 if and only if falls on the backbone on all levels
   for (int64_t j = 0; j < bbSize; j++) {
     e = 0;
-    for (auto s : ds.samples_) {
+    for (const auto& s : ds.samples_) {
       GRBLinExpr expr;
       for (int64_t c = 0; c < totClasses_; c++) {
         expr += L_[e][c];
@@ -358,7 +348,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
 
   // Constraint L 3
   e = 0;
-  for (auto s : ds.samples_) {
+  for (const auto& s : ds.samples_) {
     GRBLinExpr expr;
     for (int64_t c = 0; c < totClasses_; c++) {
       for (int64_t j = 0; j < bbSize; j++) {
@@ -553,7 +543,7 @@ std::pair<int64_t, std::shared_ptr<DecisionTreeNode>> PineTree::getNextNodeBB(st
   int64_t nonLeaf = 0;
   std::shared_ptr<DecisionTreeNode> ans = nullptr;
   int64_t inx;
-  for (auto child : curr->children_) {
+  for (const auto& child : curr->children_) {
     if (!child.second->isLeaf()) {
       nonLeaf++;
       ans = child.second;

@@ -44,9 +44,9 @@ void DecisionTreeNode::printNode(std::string prefix) {
   } else {
     std::cout << name_ << ", REGULAR, " << attribCol_ << std::endl;
     prefix += "| ";
-    for (auto it : children_) {
-      std::cout << prefix << it.first << ": ";
-      it.second->printNode(prefix);
+    for (const auto& child : children_) {
+      std::cout << prefix << child.first << ": ";
+      child.second->printNode(prefix);
     }
   }
 }

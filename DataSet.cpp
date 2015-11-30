@@ -106,10 +106,31 @@ void DataSet::initAllAttributes(DataSet& ds) {
 DataSet DataSet::getSubDataSet(int64_t attribInx, int64_t valueInx) {
   DataSet newDS;
   newDS.initAllAttributes(*this);
-  for (auto s : samples_) {
+  for (const auto& s : samples_) {
     if (s->inxValue_[attribInx] == valueInx) {
       newDS.addSample(s);
     }
   }
   return newDS;
+}
+
+std::pair<int64_t, double> DataSet::getBestClass() {
+  int64_t bestInx = 0;
+  double bestScore = getClassBenefit(0);
+  for (int64_t i = 1; i < getTotClasses(); i++) {
+    double score = getClassBenefit(i);
+    if (score > bestScore) {
+      bestInx = i;
+      bestScore = score;
+    }
+  }
+  return std::pair<int64_t, double>(bestInx, bestScore);
+}
+
+double DataSet::getClassBenefit(int64_t classInx) {
+  double ans = 0;
+  for (const auto& s : samples_) {
+    ans += s->benefit_[classInx];
+  }
+  return ans;
 }

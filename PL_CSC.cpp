@@ -19,8 +19,8 @@ int main() {
   DataSetBuilder builder;
   //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
   DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
-  for (auto s : ds.samples_) {
-    for (auto i : s->inxValue_) {
+  for (const auto& s : ds.samples_) {
+    for (const auto& i : s->inxValue_) {
       std::cout << i << " ";
     }
     std::cout << std::endl;
