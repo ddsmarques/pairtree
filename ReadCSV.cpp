@@ -8,7 +8,9 @@ std::vector<std::vector<std::string>> ReadCSV::readFile(std::string fileName) {
   std::ifstream file(fileName);
   while (file) {
     auto row = readRow(file);
-    ans.push_back(row);
+    if (row.size() > 0) {
+      ans.push_back(row);
+    }
   }
   return ans;
 }

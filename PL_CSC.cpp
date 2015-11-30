@@ -17,8 +17,8 @@ int main() {
     std::cout << std::endl;
   }
   DataSetBuilder builder;
-  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
-  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
+  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
+  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
   for (auto s : ds.samples_) {
     for (auto i : s->inxValue_) {
       std::cout << i << " ";
@@ -32,7 +32,7 @@ int main() {
   ptNode->printNode();
 
   GreedyTree gt;
-  auto gtNode = gt.createBackBone(ds, 2);
+  auto gtNode = gt.createBackBone(ds, 3);
   gtNode->printNode();
 
   Tester tester;

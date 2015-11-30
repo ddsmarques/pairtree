@@ -23,8 +23,11 @@ public:
   int64_t getSize();
   int64_t getFrequency(int64_t index);
   void sortIndexes();
+  void print();
 	
 private:
+  static bool lessThan(const T& a, const T& b);
+
   const AttributeType type_;
   std::map<T, int64_t> valueInx_;
   std::vector<T> inxValue_;
