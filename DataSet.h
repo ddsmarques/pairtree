@@ -34,6 +34,8 @@ public:
 
   void initAllAttributes(DataSet& ds);
 
+  DataSet getSubDataSet(int64_t attribInx, int64_t valueInx);
+
   std::list<std::shared_ptr<Sample>> samples_;
 
 private:

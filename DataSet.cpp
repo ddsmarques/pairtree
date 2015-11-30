@@ -102,3 +102,14 @@ void DataSet::initAllAttributes(DataSet& ds) {
   stringAttributes_ = ds.stringAttributes_;
   attribInfo_ = ds.attribInfo_;
 }
+
+DataSet DataSet::getSubDataSet(int64_t attribInx, int64_t valueInx) {
+  DataSet newDS;
+  newDS.initAllAttributes(*this);
+  for (auto s : samples_) {
+    if (s->inxValue_[attribInx] == valueInx) {
+      newDS.addSample(s);
+    }
+  }
+  return newDS;
+}

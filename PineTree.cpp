@@ -8,7 +8,54 @@
 
 PineTree::PineTree() : model_(env_) {}
 
-void PineTree::createBackBone(DataSet& ds, int64_t bbSize, SolverType type) {
+std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
+                                                        int64_t height,
+                                                        SolverType type) {
+  if (height == 0) {
+    int64_t bestInx = -1;
+    double bestScore = 0;
+    for (int64_t i = 0; i < ds.getTotClasses(); i++) {
+      double score = 0;
+      for (auto s : ds.samples_) {
+        score += s->benefit_[i];
+      }
+      if (bestInx == -1 || score > bestScore) {
+        bestInx = i;
+        bestScore = score;
+      }
+    }
+    std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
+    leaf->setName("LEAF " + std::to_string(bestInx));
+    leaf->setLeafValue(bestInx);
+
+    return leaf;
+  }
+
+  std::shared_ptr<DecisionTreeNode> root = createBackBone(ds, height, type);
+  auto node = root;
+  int64_t count = 0;
+  DataSet currDS = ds;
+  while (node != nullptr && !node->isLeaf()) {
+    auto next = getNextNodeBB(node);
+
+    for (auto child : node->children_) {
+      if (child.second->isLeaf()) {
+        //child.second = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), height-1, type);
+        node->children_[child.first] = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), height - count - 1, type);
+      }
+    }
+
+    currDS = currDS.getSubDataSet(node->getAttribCol(), next.first);
+    node = next.second;
+    count++;
+  }
+
+  return root;
+}
+
+std::shared_ptr<DecisionTreeNode> PineTree::createBackBone(DataSet& ds,
+                                                            int64_t bbSize,
+                                                            SolverType type) {
   varType_ = type == SolverType::INTEGER ? GRB_INTEGER : GRB_CONTINUOUS;
   totClasses_ = ds.getTotClasses();
   totAttributes_ = ds.getTotAttributes();
@@ -26,18 +73,17 @@ void PineTree::createBackBone(DataSet& ds, int64_t bbSize, SolverType type) {
     bbValue_[i] = getBackBoneValue(ds, i);
   }
 
-  createVariables(ds);
+  createVariables(ds, bbSize);
   model_.update();
-  createObjFunction(ds);
-  createConstraints(ds);
+  createObjFunction(ds, bbSize);
+  createConstraints(ds, bbSize);
   model_.optimize();
 
-  defineNodeLeaves(ds);
-  //printBB();
+  defineNodeLeaves(ds, bbSize);
+  return mountBackbone(ds, bbSize);
 }
 
-void PineTree::createVariables(DataSet& ds) {
-  int64_t bbSize = bbValue_.size();
+void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   // Create all X_i_j variables
   // X[i][j] = 1 if attribute i is associated to node j. 0 otherwise.
   initMultidimension(X_, { totAttributes_ - 1, bbSize });
@@ -102,8 +148,7 @@ void PineTree::createVariables(DataSet& ds) {
   }
 }
 
-void PineTree::createObjFunction(DataSet& ds) {
-  int64_t bbSize = bbValue_.size();
+void PineTree::createObjFunction(DataSet& ds, int64_t bbSize) {
   // Create objective function
   // Contribution of all samples except the ones the last node put on the backbone
   GRBLinExpr objFun;
@@ -129,8 +174,7 @@ void PineTree::createObjFunction(DataSet& ds) {
   model_.setObjective(objFun, GRB_MAXIMIZE);
 }
 
-void PineTree::createConstraints(DataSet& ds) {
-  int64_t bbSize = bbValue_.size();
+void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Constraint X 1
   // Exactly one attribute per node
   for (int64_t j = 0; j < bbSize; j++) {
@@ -386,7 +430,7 @@ void PineTree::printBB() {
   model_.write("model.lp");
 }
 
-void PineTree::defineNodeLeaves(DataSet& ds) {
+void PineTree::defineNodeLeaves(DataSet& ds, int64_t bbSize) {
   initMultidimension(nodeLeaves_, { (int64_t)bbValue_.size(), maxAttribSize_ });
   for (int64_t j = 0; j < bbValue_.size(); j++) {
     for (int64_t h = 0; h < maxAttribSize_; h++) {
@@ -396,16 +440,14 @@ void PineTree::defineNodeLeaves(DataSet& ds) {
   nodeAttrib_.resize(bbValue_.size());
 
   if (varType_ == GRB_INTEGER) {
-    defineNodeLeavesInteger(ds);
+    defineNodeLeavesInteger(ds, bbSize);
   } else {
-    defineNodeLeavesContinuous(ds);
+    defineNodeLeavesContinuous(ds, bbSize);
   }
 }
 
-void PineTree::defineNodeLeavesInteger(DataSet& ds) {
-  int64_t bbSize = bbValue_.size();
-
-  for (int64_t j = 0; j < bbValue_.size(); j++) {
+void PineTree::defineNodeLeavesInteger(DataSet& ds, int64_t bbSize) {
+  for (int64_t j = 0; j < bbSize; j++) {
     // Finds the attribute associated with node j
     for (int64_t i = 0; i < totAttributes_ - 1; i++) {
       if (X_[i][j].get(GRB_DoubleAttr_X) > 1e-5) {
@@ -429,15 +471,13 @@ void PineTree::defineNodeLeavesInteger(DataSet& ds) {
   // Value set to the backbone on the last node
   for (int64_t c = 0; c < totClasses_; c++) {
     if (Y_[c].get(GRB_DoubleAttr_X) > 1e-5) {
-      nodeLeaves_[bbValue_.size() - 1][bbValue_[bbValue_.size() - 1]] = c;
+      nodeLeaves_[bbSize - 1][bbValue_[bbSize - 1]] = c;
       break;
     }
   }
 }
 
-void PineTree::defineNodeLeavesContinuous(DataSet& ds) {
-  int64_t bbSize = bbValue_.size();
-
+void PineTree::defineNodeLeavesContinuous(DataSet& ds, int64_t bbSize) {
   // Define which attribute will be matched to each backbone node
   std::set<int64_t> used;
   for (int64_t j = 0; j < bbSize; j++) {
@@ -488,11 +528,11 @@ std::pair<double, int64_t> PineTree::selectMaxPair(std::vector<std::pair<double,
   return best;
 }
 
-std::shared_ptr<DecisionTreeNode> PineTree::mountBackbone(DataSet& ds) {
-  return mountBackboneLevel(ds, 0);
+std::shared_ptr<DecisionTreeNode> PineTree::mountBackbone(DataSet& ds, int64_t bbSize) {
+  return mountBackboneLevel(ds, 0, bbSize);
 }
 
-std::shared_ptr<DecisionTreeNode> PineTree::mountBackboneLevel(DataSet& ds, int64_t level) {
+std::shared_ptr<DecisionTreeNode> PineTree::mountBackboneLevel(DataSet& ds, int64_t level, int64_t bbSize) {
   std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, nodeAttrib_[level]);
   node->setName("(" + std::to_string(level) + ", " + std::to_string(nodeAttrib_[level]) + ")");
   for (int64_t h = 0; h < nodeLeaves_[level].size(); h++) {
@@ -503,8 +543,25 @@ std::shared_ptr<DecisionTreeNode> PineTree::mountBackboneLevel(DataSet& ds, int6
     }
   }
 
-  if (level < bbValue_.size() - 1) {
-    node->addChild(mountBackboneLevel(ds, level + 1), { bbValue_[level] });
+  if (level < bbSize - 1) {
+    node->addChild(mountBackboneLevel(ds, level + 1, bbSize), { bbValue_[level] });
   }
   return node;
+}
+
+std::pair<int64_t, std::shared_ptr<DecisionTreeNode>> PineTree::getNextNodeBB(std::shared_ptr<DecisionTreeNode> curr) {
+  int64_t nonLeaf = 0;
+  std::shared_ptr<DecisionTreeNode> ans = nullptr;
+  int64_t inx;
+  for (auto child : curr->children_) {
+    if (!child.second->isLeaf()) {
+      nonLeaf++;
+      ans = child.second;
+      inx = child.first;
+    }
+  }
+  if (nonLeaf == 1) {
+    return std::pair<int64_t, std::shared_ptr<DecisionTreeNode>>(inx, ans);
+  }
+  return std::pair<int64_t, std::shared_ptr<DecisionTreeNode>>(-1, nullptr);
 }

@@ -17,8 +17,8 @@ int main() {
     std::cout << std::endl;
   }
   DataSetBuilder builder;
-  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
-  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
+  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
+  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
   for (auto s : ds.samples_) {
     for (auto i : s->inxValue_) {
       std::cout << i << " ";
@@ -27,17 +27,21 @@ int main() {
   }
   
   PineTree pt;
-  pt.createBackBone(ds, 2, PineTree::SolverType::INTEGER);
-  auto ptNode = pt.mountBackbone(ds);
+  auto ptNode = pt.createBackBone(ds, 2, PineTree::SolverType::INTEGER);
   ptNode->printNode();
 
   GreedyTree gt;
   auto gtNode = gt.createBackBone(ds, 3);
   gtNode->printNode();
 
+  PineTree ptTree;
+  auto ptTreeNode = ptTree.createTree(ds, 2, PineTree::SolverType::INTEGER);
+  ptTreeNode->printNode();
+  
   Tester tester;
   tester.test(ptNode, ds);
   tester.test(gtNode, ds);
+  tester.test(ptTreeNode, ds);
   system("pause");
   return 0;
 }
