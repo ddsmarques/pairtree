@@ -31,7 +31,7 @@ int main() {
   ptNode->printNode();
 
   GreedyTree gt;
-  auto gtNode = gt.createBackBone(ds, 3);
+  auto gtNode = gt.createTree(ds, 2);
   gtNode->printNode();
 
   PineTree ptTree;

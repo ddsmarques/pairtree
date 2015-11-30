@@ -7,8 +7,8 @@
 class GreedyTree {
 public:
   GreedyTree();
-  std::shared_ptr<DecisionTreeNode> createBackBone(DataSet& ds, int64_t bbSize);
+  std::shared_ptr<DecisionTreeNode> createTree(DataSet& ds, int64_t height);
 
 private:
-  std::shared_ptr<DecisionTreeNode> createBackBoneRec(DataSet& ds, int64_t bbSize, std::vector<bool> availableAttrib);
+  std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height, std::vector<bool> availableAttrib);
 };

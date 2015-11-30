@@ -6,15 +6,15 @@
 
 GreedyTree::GreedyTree() {}
 
-std::shared_ptr<DecisionTreeNode> GreedyTree::createBackBone(DataSet& ds, int64_t bbSize) {
+std::shared_ptr<DecisionTreeNode> GreedyTree::createTree(DataSet& ds, int64_t height) {
   std::vector<bool> availableAttrib(ds.getTotAttributes(), true);
-  return createBackBoneRec(ds, bbSize, availableAttrib);
+  return createTreeRec(ds, height, availableAttrib);
 }
 
-std::shared_ptr<DecisionTreeNode> GreedyTree::createBackBoneRec(DataSet& ds, int64_t bbSize, std::vector<bool> availableAttrib) {
+std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t height, std::vector<bool> availableAttrib) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
-  if (bbSize == 1) {
+  if (height == 0) {
     auto best = ds.getBestClass();
 
     std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
@@ -51,9 +51,9 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createBackBoneRec(DataSet& ds, int
   std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, bestAttrib);
   for (int64_t i = 0; i < bestAttribSize; i++) {
     if (i == bestValue) {
-      node->addChild(createBackBoneRec(allDS[i], bbSize - 1, availableAttrib), { i });
+      node->addChild(createTreeRec(allDS[i], height - 1, availableAttrib), { i });
     } else {
-      node->addChild(createBackBoneRec(allDS[i], 1, availableAttrib), { i });
+      node->addChild(createTreeRec(allDS[i], height - 1, availableAttrib), { i });
     }
   }
   return node;
