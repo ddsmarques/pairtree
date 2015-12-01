@@ -8,40 +8,22 @@
 #include "Tester.h"
 
 int main() {
-  ReadCSV reader;
-  auto contents = reader.readFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
-  for (int i = 0; i < contents.size(); i++) {
-    for (int j = 0; j < contents[i].size(); j++) {
-      std::cout << contents[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
   DataSetBuilder builder;
-  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\contact-lenses.csv");
-  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Downloads\\xor.csv");
-  for (const auto& s : ds.samples_) {
-    for (const auto& i : s->inxValue_) {
-      std::cout << i << " ";
-    }
-    std::cout << std::endl;
-  }
+  DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Documents\\DataSets\\breast-cancer.csv");
+  //DataSet ds = builder.buildFromFile("C:\\Users\\Daniel\\Documents\\DataSets\\xor_fake.csv");
   
   PineTree pt;
-  auto ptNode = pt.createBackBone(ds, 2, PineTree::SolverType::INTEGER);
+  auto ptNode = pt.createTree(ds, 2, PineTree::SolverType::INTEGER);
   ptNode->printNode();
 
   GreedyTree gt;
   auto gtNode = gt.createTree(ds, 2);
   gtNode->printNode();
 
-  PineTree ptTree;
-  auto ptTreeNode = ptTree.createTree(ds, 2, PineTree::SolverType::INTEGER);
-  ptTreeNode->printNode();
-  
   Tester tester;
   tester.test(ptNode, ds);
   tester.test(gtNode, ds);
-  tester.test(ptTreeNode, ds);
+
   system("pause");
   return 0;
 }

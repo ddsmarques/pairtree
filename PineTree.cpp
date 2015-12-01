@@ -378,7 +378,7 @@ int64_t PineTree::getBackBoneValue(DataSet& ds, int64_t col) {
 
 void PineTree::printBB() {
   std::cout << "X values:" << std::endl;
-  for (int64_t j = 0; j < bbValue_.size(); j++) {
+  for (int64_t j = 0; j < X_[0].size(); j++) {
     std::cout << j << " ";
     for (int64_t i = 0; i < totAttributes_ - 1; i++) {
       if (X_[i][j].get(GRB_DoubleAttr_X) > 1e-5) {
@@ -389,7 +389,7 @@ void PineTree::printBB() {
   }
 
   std::cout << "W values:" << std::endl;
-  for (int64_t j = 0; j < bbValue_.size(); j++) {
+  for (int64_t j = 0; j < W_[0].size(); j++) {
     for (int64_t h = 0; h < maxAttribSize_; h++) {
       std::cout << "(" << j << ", " << h << "): ";
       for (int64_t c = 0; c < totClasses_; c++) {
@@ -421,13 +421,13 @@ void PineTree::printBB() {
 }
 
 void PineTree::defineNodeLeaves(DataSet& ds, int64_t bbSize) {
-  initMultidimension(nodeLeaves_, { (int64_t)bbValue_.size(), maxAttribSize_ });
-  for (int64_t j = 0; j < bbValue_.size(); j++) {
+  initMultidimension(nodeLeaves_, { bbSize, maxAttribSize_ });
+  for (int64_t j = 0; j < bbSize; j++) {
     for (int64_t h = 0; h < maxAttribSize_; h++) {
       nodeLeaves_[j][h] = -1;
     }
   }
-  nodeAttrib_.resize(bbValue_.size());
+  nodeAttrib_.resize(bbSize);
 
   if (varType_ == GRB_INTEGER) {
     defineNodeLeavesInteger(ds, bbSize);
@@ -461,7 +461,7 @@ void PineTree::defineNodeLeavesInteger(DataSet& ds, int64_t bbSize) {
   // Value set to the backbone on the last node
   for (int64_t c = 0; c < totClasses_; c++) {
     if (Y_[c].get(GRB_DoubleAttr_X) > 1e-5) {
-      nodeLeaves_[bbSize - 1][bbValue_[bbSize - 1]] = c;
+      nodeLeaves_[bbSize - 1][bbValue_[nodeAttrib_[bbSize - 1]]] = c;
       break;
     }
   }
@@ -534,7 +534,7 @@ std::shared_ptr<DecisionTreeNode> PineTree::mountBackboneLevel(DataSet& ds, int6
   }
 
   if (level < bbSize - 1) {
-    node->addChild(mountBackboneLevel(ds, level + 1, bbSize), { bbValue_[level] });
+    node->addChild(mountBackboneLevel(ds, level + 1, bbSize), { bbValue_[nodeAttrib_[level]] });
   }
   return node;
 }

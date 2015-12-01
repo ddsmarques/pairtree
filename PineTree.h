@@ -13,10 +13,10 @@ public:
   PineTree();
   std::shared_ptr<DecisionTreeNode> createBackBone(DataSet& ds, int64_t bbSize, SolverType type);
   std::shared_ptr<DecisionTreeNode> createTree(DataSet& ds, int64_t height, SolverType type);
+  void printBB();
 
 private:
   int64_t getBackBoneValue(DataSet& ds, int64_t col);
-  void printBB();
   void createVariables(DataSet& ds, int64_t bbSize);
   void createObjFunction(DataSet& ds, int64_t bbSize);
   void createConstraints(DataSet& ds, int64_t bbSize);
