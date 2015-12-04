@@ -6,9 +6,10 @@
 
 GreedyTree::GreedyTree() {}
 
-std::shared_ptr<DecisionTreeNode> GreedyTree::createTree(DataSet& ds, int64_t height) {
+std::shared_ptr<DecisionTreeNode> GreedyTree::createTree(DataSet& ds, std::shared_ptr<ConfigTree> c) {
+  std::shared_ptr<ConfigGreedy> config = std::static_pointer_cast<ConfigGreedy>(c);
   std::vector<bool> availableAttrib(ds.getTotAttributes(), true);
-  return createTreeRec(ds, height, availableAttrib);
+  return createTreeRec(ds, config->height, availableAttrib);
 }
 
 std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t height, std::vector<bool> availableAttrib) {

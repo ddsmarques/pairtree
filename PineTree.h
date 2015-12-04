@@ -3,19 +3,26 @@
 // Author: ddsmarques
 //
 #pragma once
+#include "ConfigTree.h"
 #include "DataSet.h"
 #include "DecisionTreeNode.h"
+#include "Tree.h"
 #include "gurobi_c++.h"
 
-class PineTree {
+class ConfigPine : public ConfigTree {
 public:
-  enum class SolverType {INTEGER, CONTINUOUS};
+  enum class SolverType { INTEGER, CONTINUOUS };
+  SolverType type;
+};
+
+class PineTree : public Tree {
+public:
   PineTree();
-  std::shared_ptr<DecisionTreeNode> createBackBone(DataSet& ds, int64_t bbSize, SolverType type);
-  std::shared_ptr<DecisionTreeNode> createTree(DataSet& ds, int64_t height, SolverType type);
+  std::shared_ptr<DecisionTreeNode> createTree(DataSet& ds, std::shared_ptr<ConfigTree> c) override;
   void printBB();
 
 private:
+  std::shared_ptr<DecisionTreeNode> createBackBone(DataSet& ds, int64_t bbSize, ConfigPine::SolverType type);
   int64_t getBackBoneValue(DataSet& ds, int64_t col);
   void createVariables(DataSet& ds, int64_t bbSize);
   void createObjFunction(DataSet& ds, int64_t bbSize);

@@ -8,10 +8,9 @@
 
 PineTree::PineTree() : model_(env_) {}
 
-std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
-                                                        int64_t height,
-                                                        SolverType type) {
-  if (height == 0) {
+std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds, std::shared_ptr<ConfigTree> c) {
+  std::shared_ptr<ConfigPine> config = std::static_pointer_cast<ConfigPine>(c);
+  if (config->height == 0) {
     auto best = ds.getBestClass();
     ErrorUtils::enforce(best.first >= 0, "Invalid class index");
 
@@ -22,7 +21,7 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
     return leaf;
   }
 
-  std::shared_ptr<DecisionTreeNode> root = createBackBone(ds, height, type);
+  std::shared_ptr<DecisionTreeNode> root = createBackBone(ds, config->height, config->type);
   auto node = root;
   int64_t count = 0;
   DataSet currDS = ds;
@@ -31,7 +30,9 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
 
     for (auto&& child : node->children_) {
       if (child.second->isLeaf()) {
-        child.second = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), height - count - 1, type);
+        std::shared_ptr<ConfigPine> newConfig = std::make_shared<ConfigPine>(*config);
+        newConfig->height = config->height - count - 1;
+        child.second = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), newConfig);
       }
     }
 
@@ -45,8 +46,8 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds,
 
 std::shared_ptr<DecisionTreeNode> PineTree::createBackBone(DataSet& ds,
                                                             int64_t bbSize,
-                                                            SolverType type) {
-  varType_ = type == SolverType::INTEGER ? GRB_INTEGER : GRB_CONTINUOUS;
+                                                            ConfigPine::SolverType type) {
+  varType_ = type == ConfigPine::SolverType::INTEGER ? GRB_INTEGER : GRB_CONTINUOUS;
   totClasses_ = ds.getTotClasses();
   totAttributes_ = ds.getTotAttributes();
 
