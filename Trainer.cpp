@@ -9,12 +9,13 @@ void Trainer::train(std::string fileName) {
   TrainReader reader;
   std::shared_ptr<ConfigTrain> config = reader.read(fileName);
 
+  Tester tester;
   DataSetBuilder builder;
   DataSet ds = builder.buildFromFile(config->dataSetFile);
-  auto tree = config->tree->createTree(ds, config->configTree);
-  tree->printNode();
-
-  Tester tester;
-  tester.test(tree, ds);
+  for (int64_t i = 0; i < config->configTrees.size(); i++) {
+    auto tree = config->trees[i]->createTree(ds, config->configTrees[i]);
+    tree->printNode();
+    tester.test(tree, ds);
+  }
 }
 

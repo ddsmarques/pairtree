@@ -12,37 +12,46 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
 
   config->dataSetFile = getVar<std::string>(L, "dataset");
   config->outputFolder = getVar<std::string>(L, "output");
-  auto tree = getTable(L, "tree");
-  std::string treeType = getVar<std::string>(tree, "treeType");
-  if (treeType.compare("pine") == 0) {
-    std::shared_ptr<ConfigPine> pineConfig = std::make_shared<ConfigPine>();
-    pineConfig->height = getVar<int>(tree, "height");
+  auto trees = getTable(L, "trees");
+  int count = 0;
+  while (!trees[count].isNil()) {
+    luabridge::LuaRef tree = trees[count];
+    std::string treeType = getVar<std::string>(tree, "treeType");
+    if (treeType.compare("pine") == 0) {
+      std::shared_ptr<ConfigPine> pineConfig = std::make_shared<ConfigPine>();
+      pineConfig->height = getVar<int>(tree, "height");
 
-    std::string solverType = getVar<std::string>(tree, "solver");
-    if (solverType.compare("INTEGER") == 0) {
-      pineConfig->type = ConfigPine::SolverType::INTEGER;
-    } else if (solverType.compare("CONTINUOUS") == 0) {
-      pineConfig->type = ConfigPine::SolverType::CONTINUOUS;
-    } else {
-      std::cout << "Error! Unknown solver type." << std::endl;
+      std::string solverType = getVar<std::string>(tree, "solver");
+      if (solverType.compare("INTEGER") == 0) {
+        pineConfig->type = ConfigPine::SolverType::INTEGER;
+      }
+      else if (solverType.compare("CONTINUOUS") == 0) {
+        pineConfig->type = ConfigPine::SolverType::CONTINUOUS;
+      }
+      else {
+        std::cout << "Error! Unknown solver type." << std::endl;
+        return nullptr;
+      }
+      config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(pineConfig));
+
+      std::shared_ptr<PineTree> pine = std::make_shared<PineTree>();
+      config->trees.push_back(std::dynamic_pointer_cast<Tree>(pine));
+
+    }
+    else if (treeType.compare("greedy") == 0) {
+      std::shared_ptr<ConfigGreedy> gtConfig = std::make_shared<ConfigGreedy>();
+      gtConfig->height = getVar<int>(tree, "height");
+      config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
+
+      std::shared_ptr<GreedyTree> greedy = std::make_shared<GreedyTree>();
+      config->trees.push_back(std::dynamic_pointer_cast<Tree>(greedy));
+
+    }
+    else {
+      std::cout << "Error! Unknown tree type." << std::endl;
       return nullptr;
     }
-    config->configTree = std::static_pointer_cast<ConfigTree>(pineConfig);
-
-    std::shared_ptr<PineTree> pine = std::make_shared<PineTree>();
-    config->tree = std::dynamic_pointer_cast<Tree>(pine);
-
-  } else if (treeType.compare("greedy") == 0) {
-    std::shared_ptr<ConfigGreedy> gtConfig = std::make_shared<ConfigGreedy>();
-    gtConfig->height = getVar<int>(tree, "height");
-    config->configTree = std::static_pointer_cast<ConfigTree>(gtConfig);
-
-    std::shared_ptr<GreedyTree> greedy = std::make_shared<GreedyTree>();    
-    config->tree = std::dynamic_pointer_cast<Tree>(greedy);
-
-  } else {
-    std::cout << "Error! Unknown tree type." << std::endl;
-    return nullptr;
+    count++;
   }
   return config;
 }

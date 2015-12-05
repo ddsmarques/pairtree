@@ -11,13 +11,14 @@ extern "C" {
 
 #include <string>
 #include <memory>
+#include <vector>
 
 class ConfigTrain {
 public:
   std::string dataSetFile;
   std::string outputFolder;
-  std::shared_ptr<ConfigTree> configTree;
-  std::shared_ptr<Tree> tree;
+  std::vector<std::shared_ptr<ConfigTree>> configTrees;
+  std::vector<std::shared_ptr<Tree>> trees;
 };
 
 class TrainReader {
