@@ -1,6 +1,7 @@
 
+name = "trainName"
 dataset = "C:/Users/Daniel/Documents/DataSets/xor_fake.csv"
-output = "folder"
+output = "C:/Users/Daniel/Documents/tmp/"
 
 
 trees = {}

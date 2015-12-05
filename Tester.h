@@ -6,5 +6,6 @@
 
 class Tester {
 public:
-  void test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds);
+  void test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
+            std::string outputFileName);
 };

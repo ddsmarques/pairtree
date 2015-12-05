@@ -38,15 +38,20 @@ int64_t DecisionTreeNode::classify(std::shared_ptr<Sample> s) {
   return children_[s->inxValue_[attribCol_]]->classify(s);
 }
 
-void DecisionTreeNode::printNode(std::string prefix) {
+void DecisionTreeNode::print2File(std::string fileName) {
+  std::ofstream ofs(fileName, std::ofstream::app);
+  printNode(ofs);
+}
+
+void DecisionTreeNode::printNode(std::ofstream& ofs, std::string prefix) {
   if (type_ == NodeType::LEAF) {
-    std::cout << name_ << ", LEAF, " << leafValue_ << std::endl;
+    ofs << name_ << ", LEAF, " << leafValue_ << std::endl;
   } else {
-    std::cout << name_ << ", REGULAR, " << attribCol_ << std::endl;
+    ofs << name_ << ", REGULAR, " << attribCol_ << std::endl;
     prefix += "| ";
     for (const auto& child : children_) {
-      std::cout << prefix << child.first << ": ";
-      child.second->printNode(prefix);
+      ofs << prefix << child.first << ": ";
+      child.second->printNode(ofs, prefix);
     }
   }
 }

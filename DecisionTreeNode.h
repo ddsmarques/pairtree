@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <fstream>
 
 class DecisionTreeNode {
 public:
@@ -23,7 +24,7 @@ public:
 
   int64_t getAttribCol();
 
-  void printNode(std::string prefix = "");
+  void print2File(std::string fileName);
 
   void addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v);
 
@@ -34,6 +35,8 @@ public:
   std::map<int64_t, std::shared_ptr<DecisionTreeNode>> children_;
 
 private:
+  void printNode(std::ofstream& ofs, std::string prefix = "");
+
   std::string name_;
   NodeType type_;
   int64_t attribCol_;

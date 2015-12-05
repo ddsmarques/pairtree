@@ -12,6 +12,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
 
   config->dataSetFile = getVar<std::string>(L, "dataset");
   config->outputFolder = getVar<std::string>(L, "output");
+  config->name = getVar<std::string>(L, "name");
   auto trees = getTable(L, "trees");
   int count = 0;
   while (!trees[count].isNil()) {

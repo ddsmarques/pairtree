@@ -17,6 +17,7 @@ class ConfigTrain {
 public:
   std::string dataSetFile;
   std::string outputFolder;
+  std::string name;
   std::vector<std::shared_ptr<ConfigTree>> configTrees;
   std::vector<std::shared_ptr<Tree>> trees;
 };
