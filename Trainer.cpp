@@ -5,12 +5,24 @@
 #include "Tester.h"
 #include "TrainReader.h"
 
+#include <ctime>
+#include <iomanip>
 #include <fstream>
 
 void Trainer::train(std::string fileName) {
   TrainReader reader;
   std::shared_ptr<ConfigTrain> config = reader.read(fileName);
-  std::string outputFileName = config->outputFolder + config->name + "_output.txt";
+
+  // Creates a folder appending the time to the end
+  std::time_t t = std::time(nullptr);
+  std::tm tm = *std::localtime(&t);
+  std::stringstream buffer;
+  buffer << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S");
+  std::string folderName = config->outputFolder + config->name + "_" + buffer.str() + "\\";
+  std::string cmd = "mkdir " + folderName;
+  system(cmd.c_str());
+
+  std::string outputFileName = folderName + "output.txt";
   std::ofstream outputFile;
   outputFile.open(outputFileName, std::ofstream::out);
   outputFile.close();

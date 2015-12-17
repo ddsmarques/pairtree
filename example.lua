@@ -1,7 +1,7 @@
 
 name = "trainName"
-dataset = "C:/Users/Daniel/Documents/DataSets/soybean.csv"
-output = "C:/Users/Daniel/Documents/tmp/"
+dataset = "C:\\\\Users\\Daniel\\Documents\\DataSets\\xor_fake.csv"
+output = "C:\\Users\\Daniel\\Documents\\tmp\\"
 
 
 trees = {}
