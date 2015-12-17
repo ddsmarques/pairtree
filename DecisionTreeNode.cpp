@@ -4,7 +4,7 @@
 #include <iostream>
 
 DecisionTreeNode::DecisionTreeNode(NodeType type, int64_t attribCol)
-  : type_(type), attribCol_(attribCol) {}
+  : type_(type), attribCol_(attribCol), leafValue_(-1) {}
 
 void DecisionTreeNode::setLeafValue(int64_t leafValue) {
   leafValue_ = leafValue;
@@ -16,6 +16,18 @@ void DecisionTreeNode::setName(std::string name) {
 
 int64_t DecisionTreeNode::getAttribCol() {
   return attribCol_;
+}
+
+DecisionTreeNode::NodeType DecisionTreeNode::getType() {
+  return type_;
+}
+
+std::string DecisionTreeNode::getName() {
+  return name_;
+}
+
+int64_t DecisionTreeNode::getLeafValue() {
+  return leafValue_;
 }
 
 void DecisionTreeNode::addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v) {
@@ -36,24 +48,6 @@ int64_t DecisionTreeNode::classify(std::shared_ptr<Sample> s) {
     return -1;
   }
   return children_[s->inxValue_[attribCol_]]->classify(s);
-}
-
-void DecisionTreeNode::print2File(std::string fileName) {
-  std::ofstream ofs(fileName, std::ofstream::app);
-  printNode(ofs);
-}
-
-void DecisionTreeNode::printNode(std::ofstream& ofs, std::string prefix) {
-  if (type_ == NodeType::LEAF) {
-    ofs << name_ << ", LEAF, " << leafValue_ << std::endl;
-  } else {
-    ofs << name_ << ", REGULAR, " << attribCol_ << std::endl;
-    prefix += "| ";
-    for (const auto& child : children_) {
-      ofs << prefix << child.first << ": ";
-      child.second->printNode(ofs, prefix);
-    }
-  }
 }
 
 bool DecisionTreeNode::isLeaf() {

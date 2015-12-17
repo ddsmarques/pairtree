@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "Attribute.h"
+#include "DecisionTreeNode.h"
 #include "Sample.h"
 
 
@@ -32,6 +33,10 @@ public:
 
   int64_t getAttributeFrequency(int64_t attribInx, int64_t valueInx);
 
+  std::string getAttributeName(int64_t attribInx);
+
+  std::string getAttributeStringValue(int64_t attribInx, int64_t valueInx);
+
   void initAllAttributes(DataSet& ds);
 
   DataSet getSubDataSet(int64_t attribInx, int64_t valueInx);
@@ -40,9 +45,15 @@ public:
 
   double getClassBenefit(int64_t classInx);
 
+  void printTree(std::shared_ptr<DecisionTreeNode> root,
+                 std::string fileName);
+
   std::list<std::shared_ptr<Sample>> samples_;
 
 private:
+  void printTreeRec(std::shared_ptr<DecisionTreeNode> node,
+                    std::ofstream& ofs, std::string prefix = "");
+
   std::vector<std::shared_ptr<Attribute<int64_t>>> intAttributes_;
   std::vector<std::shared_ptr<Attribute<double>>> doubleAttributes_;
   std::vector<std::shared_ptr<Attribute<std::string>>> stringAttributes_;

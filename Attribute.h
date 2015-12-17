@@ -22,6 +22,7 @@ public:
   AttributeType getType();
   int64_t getSize();
   int64_t getFrequency(int64_t index);
+  std::string getName();
   void sortIndexes();
   void print();
 	

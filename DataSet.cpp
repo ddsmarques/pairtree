@@ -134,3 +134,51 @@ double DataSet::getClassBenefit(int64_t classInx) {
   }
   return ans;
 }
+
+void DataSet::printTree(std::shared_ptr<DecisionTreeNode> root,
+                        std::string fileName) {
+  std::ofstream ofs(fileName, std::ofstream::app);
+  printTreeRec(root, ofs);
+  ofs << std::endl;
+  ofs.close();
+}
+
+void DataSet::printTreeRec(std::shared_ptr<DecisionTreeNode> node,
+                           std::ofstream& ofs, std::string prefix) {
+  if (node->getType() == DecisionTreeNode::NodeType::LEAF) {
+    ofs << " : " << getAttributeStringValue(attribInfo_.size() - 1,
+                                            node->getLeafValue());
+  } else {
+    for (const auto& child : node->children_) {
+      ofs << std::endl << prefix << getAttributeName(node->getAttribCol())
+          << " = " << getAttributeStringValue(node->getAttribCol(), child.first);
+      printTreeRec(child.second, ofs, prefix + "| ");
+    }
+  }
+}
+
+std::string DataSet::getAttributeName(int64_t attribInx) {
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Out of bounds");
+  if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
+    return intAttributes_[attribInfo_[attribInx].second]->getName();
+  }
+  else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
+    return doubleAttributes_[attribInfo_[attribInx].second]->getName();
+  }
+  else {
+    return stringAttributes_[attribInfo_[attribInx].second]->getName();
+  }
+}
+
+std::string DataSet::getAttributeStringValue(int64_t attribInx, int64_t valueInx) {
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Out of bounds");
+  if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
+    return std::to_string(intAttributes_[attribInfo_[attribInx].second]->getValue(valueInx));
+  }
+  else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
+    return std::to_string(doubleAttributes_[attribInfo_[attribInx].second]->getValue(valueInx));
+  }
+  else {
+    return stringAttributes_[attribInfo_[attribInx].second]->getValue(valueInx);
+  }
+}

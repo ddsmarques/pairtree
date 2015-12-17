@@ -24,7 +24,11 @@ public:
 
   int64_t getAttribCol();
 
-  void print2File(std::string fileName);
+  NodeType getType();
+
+  std::string getName();
+
+  int64_t getLeafValue();
 
   void addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v);
 
@@ -35,8 +39,6 @@ public:
   std::map<int64_t, std::shared_ptr<DecisionTreeNode>> children_;
 
 private:
-  void printNode(std::ofstream& ofs, std::string prefix = "");
-
   std::string name_;
   NodeType type_;
   int64_t attribCol_;

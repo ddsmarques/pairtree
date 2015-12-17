@@ -57,6 +57,11 @@ int64_t Attribute<T>::getFrequency(int64_t index) {
 }
 
 template <typename T>
+std::string Attribute<T>::getName() {
+  return name_;
+}
+
+template <typename T>
 void Attribute<T>::sortIndexes() {
   std::vector<T> order(valueInx_.size());
   int64_t count = 0;

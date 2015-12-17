@@ -1,6 +1,6 @@
 
 name = "trainName"
-dataset = "C:/Users/Daniel/Documents/DataSets/xor_fake.csv"
+dataset = "C:/Users/Daniel/Documents/DataSets/soybean.csv"
 output = "C:/Users/Daniel/Documents/tmp/"
 
 
@@ -9,7 +9,7 @@ trees[0] = {
 	name = "pinename",
 	treeType = "pine",
 	height = 2,
-	solver = "INTEGER"
+	solver = "CONTINUOUS"
 }
 
 trees[1] = {
