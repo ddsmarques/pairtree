@@ -29,6 +29,9 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       else if (solverType.compare("CONTINUOUS") == 0) {
         pineConfig->type = ConfigPine::SolverType::CONTINUOUS;
       }
+      else if (solverType.compare("CONTINUOUS_AFTER_ROOT") == 0) {
+        pineConfig->type = ConfigPine::SolverType::CONTINUOUS_AFTER_ROOT;
+      }
       else {
         std::cout << "Error! Unknown solver type." << std::endl;
         return nullptr;

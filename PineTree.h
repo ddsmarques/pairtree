@@ -11,7 +11,7 @@
 
 class ConfigPine : public ConfigTree {
 public:
-  enum class SolverType { INTEGER, CONTINUOUS };
+  enum class SolverType { INTEGER, CONTINUOUS, CONTINUOUS_AFTER_ROOT };
   SolverType type;
 };
 

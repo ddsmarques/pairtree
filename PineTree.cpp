@@ -21,7 +21,21 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds, std::shared_
     return leaf;
   }
 
-  std::shared_ptr<DecisionTreeNode> root = createBackBone(ds, config->height, config->type);
+  std::shared_ptr<DecisionTreeNode> root = nullptr;
+  if (config->type == ConfigPine::SolverType::CONTINUOUS_AFTER_ROOT) {
+    root = createBackBone(ds, config->height, ConfigPine::SolverType::CONTINUOUS);
+    
+    int64_t rootBB = getBackBoneValue(ds, root->getAttribCol());
+    for (auto&& child : root->children_) {
+      if (child.first == rootBB) {
+        child.second = createBackBone(ds.getSubDataSet(root->getAttribCol(), child.first), config->height - 1, ConfigPine::SolverType::CONTINUOUS);
+        break;
+      }
+    }
+  } else {
+    root = createBackBone(ds, config->height, config->type);
+  }
+  
   auto node = root;
   int64_t count = 0;
   DataSet currDS = ds;
@@ -31,6 +45,9 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds, std::shared_
     for (auto&& child : node->children_) {
       if (child.second->isLeaf()) {
         std::shared_ptr<ConfigPine> newConfig = std::make_shared<ConfigPine>(*config);
+        if (newConfig->type == ConfigPine::SolverType::CONTINUOUS_AFTER_ROOT) {
+          newConfig->type = ConfigPine::SolverType::CONTINUOUS;
+        }
         newConfig->height = config->height - count - 1;
         child.second = createTree(currDS.getSubDataSet(node->getAttribCol(), child.first), newConfig);
       }
