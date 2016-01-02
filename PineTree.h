@@ -39,8 +39,8 @@ private:
   template <typename T>
   void initMultidimension(T& v, std::vector<int64_t> dim);
 
-  GRBEnv env_;
-  GRBModel model_;
+  std::shared_ptr<GRBEnv> env_;
+  std::shared_ptr<GRBModel> model_;
   char varType_;
   int64_t totClasses_;
   int64_t totAttributes_;

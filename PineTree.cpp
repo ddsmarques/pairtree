@@ -1,4 +1,5 @@
 #include "PineTree.h"
+#include "CompareUtils.h"
 #include "Converter.h"
 
 #include <algorithm>
@@ -6,7 +7,7 @@
 #include <utility>
 #include <string>
 
-PineTree::PineTree() : model_(env_) {}
+PineTree::PineTree() : env_(std::make_shared<GRBEnv>()), model_(nullptr) {}
 
 std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds, std::shared_ptr<ConfigTree> c) {
   std::shared_ptr<ConfigPine> config = std::static_pointer_cast<ConfigPine>(c);
@@ -24,7 +25,7 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds, std::shared_
   std::shared_ptr<DecisionTreeNode> root = nullptr;
   if (config->type == ConfigPine::SolverType::CONTINUOUS_AFTER_ROOT) {
     root = createBackBone(ds, config->height, ConfigPine::SolverType::CONTINUOUS);
-    
+
     int64_t rootBB = getBackBoneValue(ds, root->getAttribCol());
     for (auto&& child : root->children_) {
       if (child.first == rootBB) {
@@ -64,6 +65,7 @@ std::shared_ptr<DecisionTreeNode> PineTree::createTree(DataSet& ds, std::shared_
 std::shared_ptr<DecisionTreeNode> PineTree::createBackBone(DataSet& ds,
                                                             int64_t bbSize,
                                                             ConfigPine::SolverType type) {
+  model_ = std::make_shared<GRBModel>(*env_);
   varType_ = type == ConfigPine::SolverType::INTEGER ? GRB_INTEGER : GRB_CONTINUOUS;
   totClasses_ = ds.getTotClasses();
   totAttributes_ = ds.getTotAttributes();
@@ -82,10 +84,10 @@ std::shared_ptr<DecisionTreeNode> PineTree::createBackBone(DataSet& ds,
   }
 
   createVariables(ds, bbSize);
-  model_.update();
+  model_->update();
   createObjFunction(ds, bbSize);
   createConstraints(ds, bbSize);
-  model_.optimize();
+  model_->optimize();
 
   defineNodeLeaves(ds, bbSize);
   return mountBackbone(ds, bbSize);
@@ -97,7 +99,7 @@ void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   initMultidimension(X_, { totAttributes_ - 1, bbSize });
   for (int64_t i = 0; i < totAttributes_ - 1; i++) {
     for (int64_t j = 0; j < bbSize; j++) {
-      X_[i][j] = model_.addVar(0, 1, 0, varType_, "X_" + std::to_string(i) + "_" + std::to_string(j));
+      X_[i][j] = model_->addVar(0, 1, 0, varType_, "X_" + std::to_string(i) + "_" + std::to_string(j));
     }
   }
 
@@ -106,7 +108,7 @@ void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   initMultidimension(Z_, { (int64_t)ds.samples_.size(), bbSize });
   for (int64_t e = 0; e < ds.samples_.size(); e++) {
     for (int64_t j = 0; j < bbSize; j++) {
-      Z_[e][j] = model_.addVar(0, 1, 0, varType_, "Z_" + std::to_string(e) + "_" + std::to_string(j));
+      Z_[e][j] = model_->addVar(0, 1, 0, varType_, "Z_" + std::to_string(e) + "_" + std::to_string(j));
     }
   }
 
@@ -116,7 +118,7 @@ void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   for (int64_t c = 0; c < totClasses_; c++) {
     for (int64_t j = 0; j < bbSize; j++) {
       for (int64_t h = 0; h < maxAttribSize_; h++) {
-        W_[c][j][h] = model_.addVar(0, 1, 0, varType_, "W_"
+        W_[c][j][h] = model_->addVar(0, 1, 0, varType_, "W_"
           + std::to_string(c) + "_" + std::to_string(j)
           + "_" + std::to_string(h));
       }
@@ -130,7 +132,7 @@ void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
     for (int64_t c = 0; c < totClasses_; c++) {
       for (int64_t j = 0; j < bbSize; j++) {
         for (int64_t h = 0; h < maxAttribSize_; h++) {
-          V_[e][c][j][h] = model_.addVar(0, 1, 0, varType_, "V_"
+          V_[e][c][j][h] = model_->addVar(0, 1, 0, varType_, "V_"
             + std::to_string(e) + "_" + std::to_string(c)
             + "_" + std::to_string(j) + "_" + std::to_string(h));
         }
@@ -143,7 +145,7 @@ void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   initMultidimension(L_, { (int64_t)ds.samples_.size(), totClasses_ });
   for (int64_t e = 0; e < ds.samples_.size(); e++) {
     for (int64_t c = 0; c < totClasses_; c++) {
-      L_[e][c] = model_.addVar(0, 1, 0, varType_, "L_" + std::to_string(e) + "_"
+      L_[e][c] = model_->addVar(0, 1, 0, varType_, "L_" + std::to_string(e) + "_"
         + std::to_string(c));
     }
   }
@@ -152,7 +154,7 @@ void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   // Y[c] = 1 if the samples put to the backbone by the last node are classified as 'c'
   initMultidimension(Y_, { totClasses_ });
   for (int64_t c = 0; c < totClasses_; c++) {
-    Y_[c] = model_.addVar(0, 1, 0, varType_, "Y_" + std::to_string(c));
+    Y_[c] = model_->addVar(0, 1, 0, varType_, "Y_" + std::to_string(c));
   }
 }
 
@@ -179,7 +181,7 @@ void PineTree::createObjFunction(DataSet& ds, int64_t bbSize) {
       e++;
     }
   }
-  model_.setObjective(objFun, GRB_MAXIMIZE);
+  model_->setObjective(objFun, GRB_MAXIMIZE);
 }
 
 void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
@@ -190,7 +192,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
     for (int64_t i = 0; i < totAttributes_ - 1; i++) {
       expr += X_[i][j];
     }
-    model_.addConstr(expr, GRB_EQUAL, 1, "c_X1_" + std::to_string(j));
+    model_->addConstr(expr, GRB_EQUAL, 1, "c_X1_" + std::to_string(j));
   }
 
   // Constraint X 2
@@ -200,7 +202,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
     for (int64_t j = 0; j < bbSize; j++) {
       expr += X_[i][j];
     }
-    model_.addConstr(expr, GRB_LESS_EQUAL, 1, "c_X2_" + std::to_string(i));
+    model_->addConstr(expr, GRB_LESS_EQUAL, 1, "c_X2_" + std::to_string(i));
   }
 
   // Constraint Z 1
@@ -215,7 +217,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
         expr += -1 * X_[i][0];
       }
     }
-    model_.addConstr(expr, GRB_EQUAL, 0, "c_Z1_" + std::to_string(e) + "_" + "0");
+    model_->addConstr(expr, GRB_EQUAL, 0, "c_Z1_" + std::to_string(e) + "_" + "0");
 
     // j > 0
     for (int64_t j = 1; j < bbSize; j++) {
@@ -226,7 +228,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
           expr += -1 * X_[i][j];
         }
       }
-      model_.addConstr(expr, GRB_LESS_EQUAL, 0, "c_Z1_" + std::to_string(e)
+      model_->addConstr(expr, GRB_LESS_EQUAL, 0, "c_Z1_" + std::to_string(e)
         + "_" + std::to_string(j));
     }
     e++;
@@ -245,7 +247,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
             expr += X_[i][k];
           }
         }
-        model_.addConstr(expr, GRB_LESS_EQUAL, 1, "c_Z2_" + std::to_string(e)
+        model_->addConstr(expr, GRB_LESS_EQUAL, 1, "c_Z2_" + std::to_string(e)
           + "_" + std::to_string(j) + "_" + std::to_string(k));
       }
     }
@@ -260,7 +262,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
       for (int64_t c = 0; c < totClasses_; c++) {
         expr += W_[c][j][h];
       }
-      model_.addConstr(expr, GRB_EQUAL, 1, "c_W_" + std::to_string(j) + "_" + std::to_string(h));
+      model_->addConstr(expr, GRB_EQUAL, 1, "c_W_" + std::to_string(j) + "_" + std::to_string(h));
     }
   }
 
@@ -276,7 +278,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
         }
       }
       expr += -1 * Z_[e][j];
-      model_.addConstr(expr, GRB_LESS_EQUAL, 0, "c_V1_" + std::to_string(e)
+      model_->addConstr(expr, GRB_LESS_EQUAL, 0, "c_V1_" + std::to_string(e)
         + "_c_" + std::to_string(j) + "_h");
     }
     e++;
@@ -292,7 +294,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
           GRBLinExpr expr;
           expr += V_[e][c][j][h];
           expr += -1 * W_[c][j][h];
-          model_.addConstr(expr, GRB_LESS_EQUAL, 0, "c_V2_" + std::to_string(e)
+          model_->addConstr(expr, GRB_LESS_EQUAL, 0, "c_V2_" + std::to_string(e)
             + "_" + std::to_string(c) + "_" + std::to_string(j)
             + "_" + std::to_string(h));
         }
@@ -315,7 +317,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
             expr += -1 * X_[i][j];
           }
         }
-        model_.addConstr(expr, GRB_LESS_EQUAL, 0, "c_V3_" + std::to_string(e)
+        model_->addConstr(expr, GRB_LESS_EQUAL, 0, "c_V3_" + std::to_string(e)
           + "_c_" + std::to_string(j) + "_" + std::to_string(h));
       }
     }
@@ -328,7 +330,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   for (int64_t c = 0; c < totClasses_; c++) {
     exprY += Y_[c];
   }
-  model_.addConstr(exprY, GRB_EQUAL, 1, "c_Y");
+  model_->addConstr(exprY, GRB_EQUAL, 1, "c_Y");
 
   // Constraint L 1
   // L[e][c] <= Y[c]
@@ -338,7 +340,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
       GRBLinExpr expr;
       expr += L_[e][c];
       expr += -1 * Y_[c];
-      model_.addConstr(expr, GRB_LESS_EQUAL, 0, "c_L1_" + std::to_string(e)
+      model_->addConstr(expr, GRB_LESS_EQUAL, 0, "c_L1_" + std::to_string(e)
         + "_" + std::to_string(c));
     }
     e++;
@@ -358,7 +360,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
           expr += X_[i][j];
         }
       }
-      model_.addConstr(expr, GRB_LESS_EQUAL, 1, "c_L2_" + std::to_string(e)
+      model_->addConstr(expr, GRB_LESS_EQUAL, 1, "c_L2_" + std::to_string(e)
         + "_c_" + std::to_string(j));
       e++;
     }
@@ -378,7 +380,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
     for (int64_t c = 0; c < totClasses_; c++) {
       expr += L_[e][c];
     }
-    model_.addConstr(expr, GRB_EQUAL, 1, "c_L3_" + std::to_string(e) + "_c");
+    model_->addConstr(expr, GRB_EQUAL, 1, "c_L3_" + std::to_string(e) + "_c");
     e++;
   }
 }
@@ -435,7 +437,7 @@ void PineTree::printBB() {
       std::cout << "(" << e << ", " << c << "): " << L_[e][c].get(GRB_DoubleAttr_X) << std::endl;
     }
   }
-  model_.write("model.lp");
+  model_->write("model.lp");
 }
 
 void PineTree::defineNodeLeaves(DataSet& ds, int64_t bbSize) {
@@ -500,36 +502,25 @@ void PineTree::defineNodeLeavesContinuous(DataSet& ds, int64_t bbSize) {
     used.insert(best.second);
   }
 
-  // For each backbone node define the class of each leaf
+  DataSet currDS = ds;
   for (int64_t j = 0; j < bbSize; j++) {
     int64_t attribSize = ds.getAttributeSize(nodeAttrib_[j]);
     for (int64_t h = 0; h < attribSize; h++) {
       // h == bbValue_[nodeAttrib_[j]] is not a leaf
-      if (h != bbValue_[nodeAttrib_[j]]) {
-        std::vector<std::pair<double, int64_t>> available;
-        for (int64_t c = 0; c < totClasses_; c++) {
-          available.push_back(std::make_pair(W_[c][j][h].get(GRB_DoubleAttr_X), c));
-        }
-        std::pair<double, int64_t> best = selectMaxPair(available);
-        nodeLeaves_[j][h] = best.second;
+      if (j == bbSize - 1 || h != bbValue_[nodeAttrib_[j]]) {
+        std::pair<int64_t, double> best = currDS.getSubDataSet(nodeAttrib_[j], h).getBestClass();
+        nodeLeaves_[j][h] = best.first;
       }
     }
+    currDS = currDS.getSubDataSet(nodeAttrib_[j], bbValue_[nodeAttrib_[j]]);
   }
-
-  // For the last node the bbValue is also a leaf
-  std::vector<std::pair<double, int64_t>> available;
-  for (int64_t c = 0; c < totClasses_; c++) {
-    available.push_back(std::make_pair(Y_[c].get(GRB_DoubleAttr_X), c));
-  }
-  std::pair<double, int64_t> best = selectMaxPair(available);
-  nodeLeaves_[bbSize - 1][bbValue_[nodeAttrib_[bbSize - 1]]] = best.second;
 }
 
 std::pair<double, int64_t> PineTree::selectMaxPair(std::vector<std::pair<double, int64_t>>& v) {
   ErrorUtils::enforce(v.size() > 0, "Array must have at least one element.");
   std::pair<double, int64_t> best(v[0]);
   for (int64_t i = 1; i < v.size(); i++) {
-    if (v[i].first > best.first) {
+    if (CompareUtils::compare(v[i].first, best.first) > 0) {
       best = v[i];
     }
   }

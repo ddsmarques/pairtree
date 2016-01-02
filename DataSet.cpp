@@ -1,5 +1,7 @@
 #include "DataSet.h"
 
+#include "CompareUtils.h"
+
 DataSet::DataSet() {
 
 }
@@ -119,7 +121,7 @@ std::pair<int64_t, double> DataSet::getBestClass() {
   double bestScore = getClassBenefit(0);
   for (int64_t i = 1; i < getTotClasses(); i++) {
     double score = getClassBenefit(i);
-    if (score > bestScore) {
+    if (CompareUtils::compare(score, bestScore) > 0) {
       bestInx = i;
       bestScore = score;
     }
