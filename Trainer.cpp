@@ -29,7 +29,7 @@ void Trainer::train(std::string fileName) {
 
   Tester tester;
   DataSetBuilder builder;
-  DataSet ds = builder.buildFromFile(config->dataSetFile);
+  DataSet ds = builder.buildFromFile(config->dataSetFile, config->classColStart);
   for (int64_t i = 0; i < config->configTrees.size(); i++) {
     std::shared_ptr<DecisionTreeNode> tree = config->trees[i]->createTree(ds, config->configTrees[i]);
     ds.printTree(tree, outputFileName);

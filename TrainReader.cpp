@@ -10,9 +10,16 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
   luabridge::luaL_openlibs(L);
   lua_pcall(L, 0, 0, 0);
 
-  config->dataSetFile = getVar<std::string>(L, "dataset");
   config->outputFolder = getVar<std::string>(L, "output");
   config->name = getVar<std::string>(L, "name");
+  auto dataset = getTable(L, "dataset");
+  if (!dataset.isNil()) {
+    config->dataSetFile = getVar<std::string>(dataset, "filename");
+    config->classColStart = getVar<int>(dataset, "classColStart");
+  } else {
+    std::cout << "Invalid dataset table." << std::endl;
+    return nullptr;
+  }
   auto trees = getTable(L, "trees");
   int count = 0;
   while (!trees[count].isNil()) {

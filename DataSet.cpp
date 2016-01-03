@@ -2,32 +2,7 @@
 
 #include "CompareUtils.h"
 
-DataSet::DataSet() {
-
-}
-
-void DataSet::addSample(std::shared_ptr<Sample> s) {
-  samples_.push_back(s);
-}
-
-AttributeType DataSet::getAttributeType(int64_t index) {
-  ErrorUtils::enforce(index >= 0 && index < attribInfo_.size(), "Index out of bounds");
-  return attribInfo_[index].first;
-}
-
-int64_t DataSet::getTotAttributes() {
-  return attribInfo_.size();
-}
-
-int64_t DataSet::getTotClasses() {
-  if (attribInfo_[attribInfo_.size() - 1].first == AttributeType::INTEGER) {
-    return intAttributes_[intAttributes_.size() - 1]->getSize();
-  } else if (attribInfo_[attribInfo_.size() - 1].first == AttributeType::DOUBLE) {
-    return doubleAttributes_[doubleAttributes_.size() - 1]->getSize();
-  } else {
-    return stringAttributes_[stringAttributes_.size() - 1]->getSize();
-  }
-}
+DataSet::DataSet() {}
 
 template <>
 void DataSet::addAttribute(std::shared_ptr<Attribute<int64_t>> newAttribute) {
@@ -47,9 +22,24 @@ void DataSet::addAttribute(std::shared_ptr<Attribute<std::string>> newAttribute)
   attribInfo_.push_back(std::make_pair<AttributeType, int64_t>(AttributeType::STRING, stringAttributes_.size() - 1));
 }
 
+void DataSet::setClasses(std::vector<std::string>&& classes) {
+  classes_ = classes;
+}
+
+void DataSet::addSample(std::shared_ptr<Sample> s) {
+  samples_.push_back(s);
+}
+
+AttributeType DataSet::getAttributeType(int64_t index) {
+  ErrorUtils::enforce(index >= 0 && index < attribInfo_.size(),
+                      "Index out of bounds");
+  return attribInfo_[index].first;
+}
+
 template <>
 int64_t DataSet::getValueInx(int64_t attribInx, int64_t value) {
-  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
+    "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
     return intAttributes_[attribInfo_[attribInx].second]->getInx(value);
   }
@@ -58,7 +48,8 @@ int64_t DataSet::getValueInx(int64_t attribInx, int64_t value) {
 
 template <>
 int64_t DataSet::getValueInx(int64_t attribInx, double value) {
-  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
+    "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
     return doubleAttributes_[attribInfo_[attribInx].second]->getInx(value);
   }
@@ -74,8 +65,26 @@ int64_t DataSet::getValueInx(int64_t attribInx, std::string value) {
   return -1;
 }
 
+int64_t DataSet::getClassInx(std::string value) {
+  for (int i = 0; i < classes_.size(); i++) {
+    if (classes_[i].compare(value) == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int64_t DataSet::getTotAttributes() {
+  return attribInfo_.size();
+}
+
+int64_t DataSet::getTotClasses() {
+  return classes_.size();
+}
+
 int64_t DataSet::getAttributeSize(int64_t attribInx) {
-  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Index out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
+                      "Index out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
     return intAttributes_[attribInfo_[attribInx].second]->getSize();
   } else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
@@ -86,7 +95,8 @@ int64_t DataSet::getAttributeSize(int64_t attribInx) {
 }
 
 int64_t DataSet::getAttributeFrequency(int64_t attribInx, int64_t valueInx) {
-  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Out of bounds");
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
+                      "Out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
     return intAttributes_[attribInfo_[attribInx].second]->getFrequency(valueInx);
   }
@@ -98,11 +108,40 @@ int64_t DataSet::getAttributeFrequency(int64_t attribInx, int64_t valueInx) {
   }
 }
 
+std::string DataSet::getAttributeName(int64_t attribInx) {
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
+    "Out of bounds");
+  if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
+    return intAttributes_[attribInfo_[attribInx].second]->getName();
+  }
+  else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
+    return doubleAttributes_[attribInfo_[attribInx].second]->getName();
+  }
+  else {
+    return stringAttributes_[attribInfo_[attribInx].second]->getName();
+  }
+}
+
+std::string DataSet::getAttributeStringValue(int64_t attribInx, int64_t valueInx) {
+  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
+    "Out of bounds");
+  if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
+    return std::to_string(intAttributes_[attribInfo_[attribInx].second]->getValue(valueInx));
+  }
+  else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
+    return std::to_string(doubleAttributes_[attribInfo_[attribInx].second]->getValue(valueInx));
+  }
+  else {
+    return stringAttributes_[attribInfo_[attribInx].second]->getValue(valueInx);
+  }
+}
+
 void DataSet::initAllAttributes(DataSet& ds) {
   intAttributes_ = ds.intAttributes_;
   doubleAttributes_ = ds.doubleAttributes_;
   stringAttributes_ = ds.stringAttributes_;
   attribInfo_ = ds.attribInfo_;
+  classes_ = ds.classes_;
 }
 
 DataSet DataSet::getSubDataSet(int64_t attribInx, int64_t valueInx) {
@@ -156,31 +195,5 @@ void DataSet::printTreeRec(std::shared_ptr<DecisionTreeNode> node,
           << " = " << getAttributeStringValue(node->getAttribCol(), child.first);
       printTreeRec(child.second, ofs, prefix + "| ");
     }
-  }
-}
-
-std::string DataSet::getAttributeName(int64_t attribInx) {
-  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Out of bounds");
-  if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
-    return intAttributes_[attribInfo_[attribInx].second]->getName();
-  }
-  else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
-    return doubleAttributes_[attribInfo_[attribInx].second]->getName();
-  }
-  else {
-    return stringAttributes_[attribInfo_[attribInx].second]->getName();
-  }
-}
-
-std::string DataSet::getAttributeStringValue(int64_t attribInx, int64_t valueInx) {
-  ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(), "Out of bounds");
-  if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
-    return std::to_string(intAttributes_[attribInfo_[attribInx].second]->getValue(valueInx));
-  }
-  else if (attribInfo_[attribInx].first == AttributeType::DOUBLE) {
-    return std::to_string(doubleAttributes_[attribInfo_[attribInx].second]->getValue(valueInx));
-  }
-  else {
-    return stringAttributes_[attribInfo_[attribInx].second]->getValue(valueInx);
   }
 }

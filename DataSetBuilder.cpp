@@ -5,22 +5,37 @@
 
 #include <utility>
 #include <iostream>
+#include <set>
 
 DataSetBuilder::DataSetBuilder() {
 }
 
-DataSet DataSetBuilder::buildFromFile(std::string fileName) {
+DataSet DataSetBuilder::buildFromFile(std::string fileName,
+                                      int64_t classColStart) {
   DataSet ds;
   ReadCSV csvReader;
   auto rawFile = csvReader.readFile(fileName);
   ErrorUtils::enforce(rawFile.size() > 0, "Empty file");
 
-  for (int i = 0; i < rawFile[0].size(); i++) {
+  int64_t totAttrib = 0;
+  if (classColStart <= 0) {
+    totAttrib = rawFile[0].size() - 1;
+  } else {
+    totAttrib = classColStart;
+  }
+
+  // Add all attributes to the dataset
+  for (int i = 0; i < totAttrib; i++) {
     createAttribute(i, std::move(rawFile), ds);
   }
+  // Add all classes to the dataset
+  createClass(classColStart, std::move(rawFile), ds);
+
+  // Create all samples
   for (int i = 1; i < rawFile.size(); i++) if (rawFile[i].size() > 0) {
     std::shared_ptr<Sample> s = std::make_shared<Sample>(ds.getTotAttributes(), ds.getTotClasses());
-    for (int j = 0; j < rawFile[i].size(); j++) {
+    // Sample attributes
+    for (int j = 0; j < totAttrib; j++) {
       if (ds.getAttributeType(j) == AttributeType::INTEGER) {
         s->inxValue_[j] = ds.getValueInx(j, Converter::fromString<int64_t>(rawFile[i][j]));
       } else if (ds.getAttributeType(j) == AttributeType::DOUBLE) {
@@ -29,7 +44,14 @@ DataSet DataSetBuilder::buildFromFile(std::string fileName) {
         s->inxValue_[j] = ds.getValueInx(j, rawFile[i][j]);
       }
     }
-    s->benefit_[s->inxValue_[ds.getTotAttributes() - 1]] = 1;
+    // Sample class benefit
+    if (classColStart <= 0) {
+      s->benefit_[ds.getClassInx(rawFile[i][totAttrib])] = 1;
+    } else {
+      for (int j = classColStart; j < rawFile[i].size(); j++) {
+        s->benefit_[j - classColStart] = Converter::fromString<double>(rawFile[i][j]);
+      }
+    }
     ds.addSample(s);
   }
   return ds;
@@ -64,6 +86,26 @@ void DataSetBuilder::createAttribute(int col, std::vector<std::vector<std::strin
     }
     attrib->sortIndexes();
     ds.addAttribute<std::string>(attrib);
+  }
+}
+
+void DataSetBuilder::createClass(int64_t colStart,
+                                 std::vector<std::vector<std::string>>&& rawFile,
+                                 DataSet& ds) {
+  if (colStart <= 0) {
+    std::set<std::string> values;
+    for (int64_t i = 1; i < rawFile.size(); i++) if (rawFile[i].size() > 0) {
+      values.insert(rawFile[i][rawFile[i].size() - 1]);
+    }
+    std::vector<std::string> classes;
+    for (auto&& s : values) {
+      classes.push_back(s);
+    }
+    std::sort(classes.begin(), classes.end());
+    ds.setClasses(std::move(classes));
+  } else {
+    ds.setClasses(std::vector<std::string>(rawFile[0].begin() + colStart,
+                  rawFile[0].end()));
   }
 }
 

@@ -78,8 +78,8 @@ std::shared_ptr<DecisionTreeNode> PineTree::createBackBone(DataSet& ds,
 
   // Gets the backbone value for each attribute.
   // This is the value with the highest frequency
-  bbValue_.resize(totAttributes_ - 1);
-  for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+  bbValue_.resize(totAttributes_);
+  for (int64_t i = 0; i < totAttributes_; i++) {
     bbValue_[i] = getBackBoneValue(ds, i);
   }
 
@@ -96,8 +96,8 @@ std::shared_ptr<DecisionTreeNode> PineTree::createBackBone(DataSet& ds,
 void PineTree::createVariables(DataSet& ds, int64_t bbSize) {
   // Create all X_i_j variables
   // X[i][j] = 1 if attribute i is associated to node j. 0 otherwise.
-  initMultidimension(X_, { totAttributes_ - 1, bbSize });
-  for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+  initMultidimension(X_, { totAttributes_, bbSize });
+  for (int64_t i = 0; i < totAttributes_; i++) {
     for (int64_t j = 0; j < bbSize; j++) {
       X_[i][j] = model_->addVar(0, 1, 0, varType_, "X_" + std::to_string(i) + "_" + std::to_string(j));
     }
@@ -189,7 +189,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
   // Exactly one attribute per node
   for (int64_t j = 0; j < bbSize; j++) {
     GRBLinExpr expr;
-    for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+    for (int64_t i = 0; i < totAttributes_; i++) {
       expr += X_[i][j];
     }
     model_->addConstr(expr, GRB_EQUAL, 1, "c_X1_" + std::to_string(j));
@@ -197,7 +197,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
 
   // Constraint X 2
   // At most one node can be matched to an attribute
-  for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+  for (int64_t i = 0; i < totAttributes_; i++) {
     GRBLinExpr expr;
     for (int64_t j = 0; j < bbSize; j++) {
       expr += X_[i][j];
@@ -212,7 +212,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
     // j = 0 is treated seperately
     GRBLinExpr expr;
     expr += Z_[e][0];
-    for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+    for (int64_t i = 0; i < totAttributes_; i++) {
       if (s->inxValue_[i] != bbValue_[i]) {
         expr += -1 * X_[i][0];
       }
@@ -223,7 +223,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
     for (int64_t j = 1; j < bbSize; j++) {
       expr.clear();
       expr += Z_[e][j];
-      for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+      for (int64_t i = 0; i < totAttributes_; i++) {
         if (s->inxValue_[i] != bbValue_[i]) {
           expr += -1 * X_[i][j];
         }
@@ -242,7 +242,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
       for (int64_t k = 0; k < j; k++) {
         GRBLinExpr expr;
         expr += Z_[e][j];
-        for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+        for (int64_t i = 0; i < totAttributes_; i++) {
           if (s->inxValue_[i] != bbValue_[i]) {
             expr += X_[i][k];
           }
@@ -312,7 +312,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
         for (int64_t c = 0; c < totClasses_; c++) {
           expr += V_[e][c][j][h];
         }
-        for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+        for (int64_t i = 0; i < totAttributes_; i++) {
           if (s->inxValue_[i] == h) {
             expr += -1 * X_[i][j];
           }
@@ -355,7 +355,7 @@ void PineTree::createConstraints(DataSet& ds, int64_t bbSize) {
       for (int64_t c = 0; c < totClasses_; c++) {
         expr += L_[e][c];
       }
-      for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+      for (int64_t i = 0; i < totAttributes_; i++) {
         if (s->inxValue_[i] != bbValue_[i]) {
           expr += X_[i][j];
         }
@@ -400,7 +400,7 @@ void PineTree::printBB() {
   std::cout << "X values:" << std::endl;
   for (int64_t j = 0; j < X_[0].size(); j++) {
     std::cout << j << " ";
-    for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+    for (int64_t i = 0; i < totAttributes_; i++) {
       if (X_[i][j].get(GRB_DoubleAttr_X) > 1e-5) {
         std::cout << "(" << i << ", " << bbValue_[i] << ") ";
       }
@@ -459,7 +459,7 @@ void PineTree::defineNodeLeaves(DataSet& ds, int64_t bbSize) {
 void PineTree::defineNodeLeavesInteger(DataSet& ds, int64_t bbSize) {
   for (int64_t j = 0; j < bbSize; j++) {
     // Finds the attribute associated with node j
-    for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+    for (int64_t i = 0; i < totAttributes_; i++) {
       if (X_[i][j].get(GRB_DoubleAttr_X) > 1e-5) {
         nodeAttrib_[j] = i;
         break;
@@ -492,7 +492,7 @@ void PineTree::defineNodeLeavesContinuous(DataSet& ds, int64_t bbSize) {
   std::set<int64_t> used;
   for (int64_t j = 0; j < bbSize; j++) {
     std::vector<std::pair<double, int64_t>> available;
-    for (int64_t i = 0; i < totAttributes_ - 1; i++) {
+    for (int64_t i = 0; i < totAttributes_; i++) {
       if (used.find(i) == used.end()) {
         available.push_back(std::make_pair(X_[i][j].get(GRB_DoubleAttr_X), i));
       }

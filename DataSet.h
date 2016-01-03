@@ -18,12 +18,16 @@ public:
   template <typename T>
   void addAttribute(std::shared_ptr<Attribute<T>> newAttribute);
 
+  void setClasses(std::vector<std::string>&& classes);
+
   void addSample(std::shared_ptr<Sample> s);
 
   AttributeType getAttributeType(int64_t index);
 
   template <typename T>
   int64_t getValueInx(int64_t attribInx, T value);
+
+  int64_t getClassInx(std::string value);
 
   int64_t getTotAttributes();
 
@@ -58,4 +62,5 @@ private:
   std::vector<std::shared_ptr<Attribute<double>>> doubleAttributes_;
   std::vector<std::shared_ptr<Attribute<std::string>>> stringAttributes_;
   std::vector<std::pair<AttributeType, int64_t>> attribInfo_;
+  std::vector<std::string> classes_;
 };

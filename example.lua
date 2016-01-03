@@ -1,8 +1,11 @@
 
 name = "trainName"
-dataset = "C:\\\\Users\\Daniel\\Documents\\DataSets\\xor_fake.csv"
 output = "C:\\Users\\Daniel\\Documents\\tmp\\"
 
+dataset = {
+	filename = "C:\\\\Users\\Daniel\\Documents\\DataSets\\xor_fake.csv",
+	classColStart = -1
+}
 
 trees = {}
 trees[0] = {

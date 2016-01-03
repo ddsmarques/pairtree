@@ -16,6 +16,7 @@ extern "C" {
 class ConfigTrain {
 public:
   std::string dataSetFile;
+  int64_t classColStart;
   std::string outputFolder;
   std::string name;
   std::vector<std::shared_ptr<ConfigTree>> configTrees;
