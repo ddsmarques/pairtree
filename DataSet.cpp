@@ -136,6 +136,11 @@ std::string DataSet::getAttributeStringValue(int64_t attribInx, int64_t valueInx
   }
 }
 
+std::string DataSet::getClassValue(int64_t classInx) {
+  ErrorUtils::enforce(classInx < classes_.size(), "Class index out of bounds");
+  return classes_[classInx];
+}
+
 void DataSet::initAllAttributes(DataSet& ds) {
   intAttributes_ = ds.intAttributes_;
   doubleAttributes_ = ds.doubleAttributes_;
@@ -187,8 +192,7 @@ void DataSet::printTree(std::shared_ptr<DecisionTreeNode> root,
 void DataSet::printTreeRec(std::shared_ptr<DecisionTreeNode> node,
                            std::ofstream& ofs, std::string prefix) {
   if (node->getType() == DecisionTreeNode::NodeType::LEAF) {
-    ofs << " : " << getAttributeStringValue(attribInfo_.size() - 1,
-                                            node->getLeafValue());
+    ofs << " : " << getClassValue(node->getLeafValue());
   } else {
     for (const auto& child : node->children_) {
       ofs << std::endl << prefix << getAttributeName(node->getAttribCol())

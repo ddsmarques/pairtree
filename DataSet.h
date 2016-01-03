@@ -41,6 +41,8 @@ public:
 
   std::string getAttributeStringValue(int64_t attribInx, int64_t valueInx);
 
+  std::string getClassValue(int64_t classInx);
+
   void initAllAttributes(DataSet& ds);
 
   DataSet getSubDataSet(int64_t attribInx, int64_t valueInx);
