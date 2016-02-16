@@ -1,5 +1,6 @@
 #include "GreedyTree.h"
 
+#include "CompareUtils.h"
 #include "ErrorUtils.h"
 
 #include <string>
@@ -26,15 +27,18 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
   }
 
   int64_t bestAttrib = -1;
-  int64_t bestValue = -1;
+  double bestScore = 0;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
     if (availableAttrib[i]) {
-      int64_t attribSize = ds.getAttributeSize(i);
-      for (int64_t j = 0; j < attribSize; j++) {
-        if (bestAttrib == -1 || ds.getAttributeFrequency(i, j) > ds.getAttributeFrequency(bestAttrib, bestValue)) {
-          bestAttrib = i;
-          bestValue = j;
-        }
+      double attribScore = 0;
+      for (int64_t j = 0; j < ds.getAttributeSize(i); j++) {
+        auto bestClass = ds.getSubDataSet(i, j).getBestClass();
+        attribScore += bestClass.second;
+      }
+      if (bestAttrib == -1
+          || CompareUtils::compare(attribScore, bestScore) > 0) {
+        bestAttrib = i;
+        bestScore = attribScore;
       }
     }
   }
@@ -50,12 +54,8 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
   }
 
   std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, bestAttrib);
-  for (int64_t i = 0; i < bestAttribSize; i++) {
-    if (i == bestValue) {
-      node->addChild(createTreeRec(allDS[i], height - 1, availableAttrib), { i });
-    } else {
-      node->addChild(createTreeRec(allDS[i], height - 1, availableAttrib), { i });
-    }
+  for (int64_t j = 0; j < bestAttribSize; j++) {
+    node->addChild(createTreeRec(allDS[j], height - 1, availableAttrib), { j });
   }
   return node;
 }
