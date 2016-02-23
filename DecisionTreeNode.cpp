@@ -7,11 +7,17 @@ DecisionTreeNode::DecisionTreeNode(NodeType type, int64_t attribCol)
   : type_(type), attribCol_(attribCol), leafValue_(-1) {}
 
 void DecisionTreeNode::setLeafValue(int64_t leafValue) {
+  ErrorUtils::enforce(type_ == NodeType::LEAF, "Node is not a leaf.");
   leafValue_ = leafValue;
 }
 
 void DecisionTreeNode::setName(std::string name) {
   name_ = name;
+}
+
+void DecisionTreeNode::setAttribCol(int64_t attribCol) {
+  ErrorUtils::enforce(type_ == NodeType::REGULAR, "Node is a leaf.");
+  attribCol_ = attribCol;
 }
 
 int64_t DecisionTreeNode::getAttribCol() {

@@ -22,6 +22,8 @@ public:
 
   void setName(std::string name);
 
+  void setAttribCol(int64_t attribCol);
+
   int64_t getAttribCol();
 
   NodeType getType();
