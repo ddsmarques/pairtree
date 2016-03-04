@@ -29,6 +29,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
     if (treeType.compare("pine") == 0) {
       std::shared_ptr<ConfigPine> pineConfig = std::make_shared<ConfigPine>();
       pineConfig->height = getVar<int>(tree, "height");
+      pineConfig->name = getVar<std::string>(tree, "name");
 
       std::string solverType = getVar<std::string>(tree, "solver");
       if (solverType.compare("INTEGER") == 0) {
@@ -53,6 +54,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
     else if (treeType.compare("greedy") == 0) {
       std::shared_ptr<ConfigGreedy> gtConfig = std::make_shared<ConfigGreedy>();
       gtConfig->height = getVar<int>(tree, "height");
+      gtConfig->name = getVar<std::string>(tree, "name");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
 
       std::shared_ptr<GreedyTree> greedy = std::make_shared<GreedyTree>();
@@ -62,6 +64,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
     else if (treeType.compare("greedyBB") == 0) {
       std::shared_ptr<ConfigGreedyBB> gtConfig = std::make_shared<ConfigGreedyBB>();
       gtConfig->height = getVar<int>(tree, "height");
+      gtConfig->name = getVar<std::string>(tree, "name");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
 
       std::shared_ptr<GreedyBBTree> greedyBB = std::make_shared<GreedyBBTree>();
