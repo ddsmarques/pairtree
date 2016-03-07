@@ -13,6 +13,15 @@ extern "C" {
 #include <memory>
 #include <vector>
 
+class ConfigTrainMode {
+public:
+  enum class trainType {RANDOM_SPLIT, TEST_SET, TRAINING_SET};
+
+  trainType type;
+  std::string testFileName;
+  double ratio;
+};
+
 class ConfigTrain {
 public:
   std::string dataSetFile;
@@ -21,6 +30,7 @@ public:
   std::string name;
   std::vector<std::shared_ptr<ConfigTree>> configTrees;
   std::vector<std::shared_ptr<Tree>> trees;
+  std::shared_ptr<ConfigTrainMode> trainMode;
 };
 
 class TrainReader {

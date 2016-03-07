@@ -10,9 +10,9 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
   ErrorUtils::enforce(luaL_dofile(L, fileName.c_str()) == 0, "Error opening config file " + fileName);
   luabridge::luaL_openlibs(L);
   lua_pcall(L, 0, 0, 0);
-
   config->outputFolder = getVar<std::string>(L, "output");
   config->name = getVar<std::string>(L, "name");
+
   auto dataset = getTable(L, "dataset");
   if (!dataset.isNil()) {
     config->dataSetFile = getVar<std::string>(dataset, "filename");
@@ -21,6 +21,29 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
     std::cout << "Invalid dataset table." << std::endl;
     return nullptr;
   }
+  auto trainMode = getTable(L, "trainMode");
+  if (!trainMode.isNil()) {
+    std::string auxType = getVar<std::string>(trainMode, "trainType");
+    if (auxType.compare("randomsplit") == 0) {
+      config->trainMode = std::make_shared<ConfigTrainMode>();
+      config->trainMode->type = ConfigTrainMode::trainType::RANDOM_SPLIT;
+      config->trainMode->ratio = getVar<double>(trainMode, "ratio");
+    } else if (auxType.compare("testset") == 0) {
+      config->trainMode = std::make_shared<ConfigTrainMode>();
+      config->trainMode->type = ConfigTrainMode::trainType::TEST_SET;
+      config->trainMode->testFileName = getVar<std::string>(trainMode, "filename");
+    } else if (auxType.compare("trainingset") == 0) {
+      config->trainMode = std::make_shared<ConfigTrainMode>();
+      config->trainMode->type = ConfigTrainMode::trainType::TRAINING_SET;
+    } else {
+      std::cout << "Invalid trainType value." << std::endl;
+      return nullptr;
+    }
+  } else {
+    std::cout << "Invalid trainMode table." << std::endl;
+    return nullptr;
+  }
+
   auto trees = getTable(L, "trees");
   int count = 0;
   while (!trees[count].isNil()) {

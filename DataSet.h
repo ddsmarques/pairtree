@@ -22,6 +22,8 @@ public:
 
   void addSample(std::shared_ptr<Sample> s);
 
+  void eraseSample(std::list<std::shared_ptr<Sample>>::iterator it);
+
   AttributeType getAttributeType(int64_t index);
 
   template <typename T>

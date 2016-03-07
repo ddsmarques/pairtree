@@ -30,6 +30,10 @@ void DataSet::addSample(std::shared_ptr<Sample> s) {
   samples_.push_back(s);
 }
 
+void DataSet::eraseSample(std::list<std::shared_ptr<Sample>>::iterator it) {
+  samples_.erase(it);
+}
+
 AttributeType DataSet::getAttributeType(int64_t index) {
   ErrorUtils::enforce(index >= 0 && index < attribInfo_.size(),
                       "Index out of bounds");

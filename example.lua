@@ -7,6 +7,19 @@ dataset = {
 	classColStart = -1
 }
 
+trainMode = {
+	trainType = "trainingset"
+}
+--[[
+trainMode = {
+	trainType = "testset",
+	filename = "bla.csv"
+}
+trainMode = {
+	trainType = "randomsplit",
+	ratio = 0.8,
+}
+--]]
 trees = {}
 trees[0] = {
 	name = "pinename",
