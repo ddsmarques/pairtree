@@ -66,7 +66,6 @@ void Trainer::train(std::string fileName) {
     timeFile.close();
   }
 }
-#include <iostream>
 
 void Trainer::createTrainTestDS(std::shared_ptr<ConfigTrain> config) {
   DataSetBuilder builder;
