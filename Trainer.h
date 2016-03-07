@@ -8,7 +8,10 @@ public:
   void train(std::string fileName);
 
 private:
-  void createTrainTestDS(std::shared_ptr<ConfigTrain> config);
-  DataSet trainDS_;
-  DataSet testDS_;
+  void getRandomSplit(DataSet& trainDS, DataSet& testDS, double ratio);
+  double runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
+                 DataSet& trainDS, DataSet& testDS);
+
+  std::string timeFileName_;
+  std::string outputFolder_;
 };

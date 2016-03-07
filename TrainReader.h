@@ -20,6 +20,7 @@ public:
   trainType type;
   std::string testFileName;
   double ratio;
+  int folds;
 };
 
 class ConfigTrain {

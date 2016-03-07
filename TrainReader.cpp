@@ -28,6 +28,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       config->trainMode = std::make_shared<ConfigTrainMode>();
       config->trainMode->type = ConfigTrainMode::trainType::RANDOM_SPLIT;
       config->trainMode->ratio = getVar<double>(trainMode, "ratio");
+      config->trainMode->folds = getVar<int>(trainMode, "folds");
     } else if (auxType.compare("testset") == 0) {
       config->trainMode = std::make_shared<ConfigTrainMode>();
       config->trainMode->type = ConfigTrainMode::trainType::TEST_SET;

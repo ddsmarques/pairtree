@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-void Tester::test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
+double Tester::test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
                   std::string outputFileName) {
   double score = 0;
   for (const auto& s : ds.samples_) {
@@ -12,4 +12,5 @@ void Tester::test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
   }
   std::ofstream ofs(outputFileName, std::ofstream::app);
   ofs << "Score " << score << std::endl;
+  return score;
 }

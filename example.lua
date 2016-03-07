@@ -18,6 +18,7 @@ trainMode = {
 trainMode = {
 	trainType = "randomsplit",
 	ratio = 0.8,
+	folds = 3
 }
 --]]
 trees = {}
