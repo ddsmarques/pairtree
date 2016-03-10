@@ -116,7 +116,7 @@ double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
   std::shared_ptr<DecisionTreeNode> tree = config->trees[treeInx]->createTree(trainDS, config->configTrees[treeInx]);
   trainDS.printTree(tree, outputFileName);
   Tester tester;
-  return tester.test(tree, testDS, outputFileName);
+  double score = tester.test(tree, testDS, outputFileName);
 
   // Log finishing test
   std::time_t end = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -129,5 +129,7 @@ double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
     << end - start
     << std::endl;
   timeFile.close();
+
+  return score;
 }
 
