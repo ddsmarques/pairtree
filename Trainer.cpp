@@ -23,6 +23,10 @@ void Trainer::train(std::string fileName) {
   std::string cmd = "mkdir " + outputFolder_;
   system(cmd.c_str());
 
+  // Copy input file
+  cmd = "copy " + fileName + " " + outputFolder_;
+  system(cmd.c_str());
+
   // Create summary file
   std::string summaryFileName = outputFolder_ + "summary.txt";
   std::ofstream summaryFile;
