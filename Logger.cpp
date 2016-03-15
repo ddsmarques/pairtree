@@ -15,7 +15,6 @@ void Logger::setOutput(std::string fileName) {
     out_.set_rdbuf(std::cout.rdbuf());
   }
   else {
-    //std::shared_ptr<std::filebuf> fb = std::make_shared<std::filebuf>();
     fb_.open(fileName, std::ios::out);
     out_.set_rdbuf(&fb_);
   }
