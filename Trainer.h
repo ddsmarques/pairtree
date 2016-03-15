@@ -12,6 +12,5 @@ private:
   double runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
                  DataSet& trainDS, DataSet& testDS);
 
-  std::string timeFileName_;
   std::string outputFolder_;
 };

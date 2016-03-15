@@ -2,6 +2,7 @@
 
 #include "DataSet.h"
 #include "DataSetBuilder.h"
+#include "Logger.h"
 #include "Tester.h"
 
 #include <chrono>
@@ -23,6 +24,10 @@ void Trainer::train(std::string fileName) {
   std::string cmd = "mkdir " + outputFolder_;
   system(cmd.c_str());
 
+  // Create time log file
+  Logger::setOutput(outputFolder_ + "log.txt");
+  Logger::log("Test name: " + config->name);
+
   // Copy input file
   cmd = "copy " + fileName + " " + outputFolder_;
   system(cmd.c_str());
@@ -33,13 +38,6 @@ void Trainer::train(std::string fileName) {
   summaryFile.open(summaryFileName, std::ofstream::out);
   summaryFile << "Summary file" << std::endl;
   summaryFile.close();
-
-  // Create time log file
-  timeFileName_ = outputFolder_ + "time_log.txt";
-  std::ofstream timeFile;
-  timeFile.open(timeFileName_, std::ofstream::out);
-  timeFile << "Test name: " << config->name << std::endl;
-  timeFile.close();
 
   DataSetBuilder builder;
   DataSet trainDS;
@@ -75,6 +73,8 @@ void Trainer::train(std::string fileName) {
     summaryFile << config->configTrees[i]->name << " " << score << std::endl;
     summaryFile.close();
   }
+
+  Logger::closeOutput();
 }
 
 
@@ -101,14 +101,8 @@ void Trainer::getRandomSplit(DataSet& trainDS, DataSet& testDS, double ratio) {
 double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
                         DataSet& trainDS, DataSet& testDS) {
   // Log starting test
-  std::ofstream timeFile;
-  std::time_t start = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  timeFile.open(timeFileName_, std::ofstream::app);
-  timeFile << "Starting test " << config->configTrees[treeInx]->name << std::endl;
-  timeFile << "Starting time: "
-    << std::put_time(std::localtime(&start), "%Y-%m-%d_%H-%M-%S")
-    << std::endl;
-  timeFile.close();
+  auto start = std::chrono::system_clock::now();
+  Logger::log("Starting test " + config->configTrees[treeInx]->name);
 
   // Create model output file
   std::string outputFileName = outputFolder_ + "outputTree_" + config->configTrees[treeInx]->name + ".txt";
@@ -123,16 +117,9 @@ double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
   double score = tester.test(tree, testDS, outputFileName);
 
   // Log finishing test
-  std::time_t end = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::time_t elapsed = end - start;
-  timeFile.open(timeFileName_, std::ofstream::app);
-  timeFile << "Finishing time: "
-    << std::put_time(std::localtime(&end), "%Y-%m-%d_%H-%M-%S")
-    << std::endl;
-  timeFile << "Elapsed time in seconds "
-    << end - start
-    << std::endl;
-  timeFile.close();
+  Logger::log("Finished test " + config->configTrees[treeInx]->name);
+  int64_t countSeconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
+  Logger::log("Elapsed time in seconds " + std::to_string(countSeconds));
 
   return score;
 }

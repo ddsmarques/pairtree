@@ -1,7 +1,9 @@
 #include "DataSetBuilder.h"
-#include "ReadCSV.h"
+
 #include "Converter.h"
 #include "ErrorUtils.h"
+#include "Logger.h"
+#include "ReadCSV.h"
 
 #include <utility>
 #include <iostream>
@@ -17,6 +19,7 @@ DataSet DataSetBuilder::buildFromFile(std::string fileName,
   auto rawFile = csvReader.readFile(fileName);
   ErrorUtils::enforce(rawFile.size() > 0, "Empty file");
 
+  Logger::log("Started building file " + fileName);
   int64_t totAttrib = 0;
   if (classColStart <= 0) {
     totAttrib = rawFile[0].size() - 1;
@@ -54,6 +57,7 @@ DataSet DataSetBuilder::buildFromFile(std::string fileName,
     }
     ds.addSample(s);
   }
+  Logger::log("Finished building file " + fileName);
   return ds;
 }
 
