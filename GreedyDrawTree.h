@@ -21,4 +21,7 @@ private:
   bool isGoodAttribute(DataSet& ds, int64_t attribInx, int totDraws);
   double getRandomAttribute(DataSet& ds, int64_t attribInx);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
+
+  // Order the attributes by smallest branching factor first
+  std::vector<int64_t> attribOrder_;
 };

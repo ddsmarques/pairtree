@@ -6,6 +6,16 @@
 
 
 std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTree(DataSet& ds, std::shared_ptr<ConfigTree> c) {
+  std::vector<std::pair<int64_t, int64_t>> auxOrder(ds.getTotAttributes());
+  for (int i = 0; i < auxOrder.size(); i++) {
+    auxOrder[i] = std::pair<int64_t, int64_t>(ds.getAttributeSize(i), i);
+  }
+  std::sort(auxOrder.begin(), auxOrder.end());
+  attribOrder_ = std::vector<int64_t>(ds.getTotAttributes());
+  for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
+    attribOrder_[i] = auxOrder[i].second;
+  }
+
   std::shared_ptr<ConfigGreedyDraw> config = std::static_pointer_cast<ConfigGreedyDraw>(c);
   std::vector<bool> availableAttrib(ds.getTotAttributes(), true);
   return createTreeRec(ds, config->height, config->totDraws, availableAttrib);
@@ -23,8 +33,9 @@ std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTreeRec(DataSet& ds,
 
   int64_t bestAttrib = -1;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    if (availableAttrib[i] && isGoodAttribute(ds, i, totDraws)) {
-      bestAttrib = i;
+    if (availableAttrib[attribOrder_[i]]
+        && isGoodAttribute(ds, attribOrder_[i], totDraws)) {
+      bestAttrib = attribOrder_[i];
       break;
     }
   }
