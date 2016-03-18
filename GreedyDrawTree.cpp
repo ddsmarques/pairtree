@@ -71,7 +71,7 @@ bool GreedyDrawTree::isGoodAttribute(DataSet& ds, int64_t attribInx, int totDraw
 
   for (int i = 0; i < totDraws; i++) {
     double score = getRandomAttribute(ds, attribInx);
-    if (CompareUtils::compare(attribScore, score) < 0) {
+    if (CompareUtils::compare(attribScore, score) <= 0) {
       return false;
     }
   }
