@@ -23,13 +23,14 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   int bestAttrib = -1;
   double bestScoreRatio = 0;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    double score = getAttribScore(ds, i, samplesInfo);
-    double randScore = getRandomScore(ds, i, samplesInfo);
-    if (CompareUtils::compare(randScore, 0) != 0
-        && CompareUtils::compare(score / randScore, 1) > 0
-        && CompareUtils::compare(score / randScore, bestScoreRatio) > 0) {
+    long double score = getAttribScore(ds, i, samplesInfo);
+    auto randScore = getRandomScore(ds, i, samplesInfo);
+    long double expected = randScore.first;
+    if (CompareUtils::compare(expected, 0) != 0
+        && CompareUtils::compare(score / expected, 1) > 0
+        && CompareUtils::compare(score / expected, bestScoreRatio) > 0) {
       bestAttrib = i;
-      bestScoreRatio = score / randScore;
+      bestScoreRatio = score / expected;
     }
   }
 
@@ -54,7 +55,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 }
 
 
-double PairTree::getAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+long double PairTree::getAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
   int64_t attribSize = ds.getAttributeSize(attribInx);
   std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
   // totalValueClass[j][c] = number of samples valued 'j' at 'attribInx' whose class is 'c'
@@ -64,19 +65,20 @@ double PairTree::getAttribScore(DataSet& ds, int64_t attribInx, std::vector<Pair
     totalClass[s.bestClass]++;
     totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]++;
   }
+  int64_t totPairs = totalClass[0] * totalClass[1];
 
-  double ans = 0;
+  long double score = 0;
   for (auto s : samplesInfo) {
     int notBestClass = (s.bestClass + 1) % 2;
-    ans += s.diff * (totalClass[notBestClass] - totalValueClass[s.ptr->inxValue_[attribInx]][notBestClass]);
+    score += s.diff * (totalClass[notBestClass] - totalValueClass[s.ptr->inxValue_[attribInx]][notBestClass]);
     totalClass[s.bestClass]--;
     totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]--;
   }
-  return ans;
+  return score / totPairs;
 }
 
 
-double PairTree::getRandomScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+std::pair<long double, long double> PairTree::getRandomScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
   int64_t attribSize = ds.getAttributeSize(attribInx);
   std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
   std::vector<double> probValue(attribSize, 0); // probValue[j] = probability of a sample be valued 'j' in attribute attribInx
@@ -87,6 +89,9 @@ double PairTree::getRandomScore(DataSet& ds, int64_t attribInx, std::vector<Pair
   for (int j = 0; j < attribSize; j++) {
     probValue[j] = probValue[j] / samplesInfo.size();
   }
+  int64_t totPairs = totalClass[0] * totalClass[1];
+  std::vector<int64_t> totalClassCopy = totalClass;
+
 
   long double expected = 0;
   for (auto s : samplesInfo) {
@@ -97,8 +102,22 @@ double PairTree::getRandomScore(DataSet& ds, int64_t attribInx, std::vector<Pair
     }
     totalClass[s.bestClass]--;
   }
+  expected = expected /totPairs;
+  
+  totalClass = totalClassCopy;
+  long double var = 0;
+  for (auto s : samplesInfo) {
+    int notBestClass = (s.bestClass + 1) % 2;
+    for (int j = 0; j < attribSize; j++) {
+      double p = probValue[j];
+      var += (((long double)s.diff) - expected) * (((long double)s.diff) - expected) * totalClass[notBestClass] * p * (1 - p);
+    }
+    totalClass[s.bestClass]--;
+  }
+  var = var / totPairs;
+  long double std = sqrt(var);
 
-  return expected;
+  return std::make_pair(expected, std);
 }
 
 bool compareSampleInfo(const PairTree::SampleInfo& a, const PairTree::SampleInfo& b) {

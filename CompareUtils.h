@@ -2,5 +2,5 @@
 
 class CompareUtils {
 public:
-  static int compare(const double& a, const double& b, double eps = 1e-9);
+  static int compare(const long double& a, const long double& b, long double eps = 1e-9);
 };

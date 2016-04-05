@@ -20,7 +20,7 @@ public:
 private:
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int height);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
-  double getAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
-  double getRandomScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
+  long double getAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
+  std::pair<long double, long double> getRandomScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
   void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
 };
