@@ -73,6 +73,7 @@ void Trainer::train(std::string fileName) {
         getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold+1);
         score += runTree(config, i, currTrain, currTest);
       }
+      score = score / config->trainMode->folds;
     } else {
       score = runTree(config, i, trainDS, testDS);
     }
