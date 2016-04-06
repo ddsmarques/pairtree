@@ -3,6 +3,8 @@
 #include "CompareUtils.h"
 #include "Logger.h"
 
+#include <cmath>
+
 
 std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_ptr<ConfigTree> c) {
   ErrorUtils::enforce(ds.getTotClasses() == 2, "Error! Number of classes must be 2.");
@@ -21,16 +23,17 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   initSampleInfo(ds, samplesInfo);
 
   int bestAttrib = -1;
-  double bestScoreRatio = 0;
+  double bestBound = 1;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
     long double score = getAttribScore(ds, i, samplesInfo);
     auto randScore = getRandomScore(ds, i, samplesInfo);
     long double expected = randScore.first;
-    if (CompareUtils::compare(expected, 0) != 0
-        && CompareUtils::compare(score / expected, 1) > 0
-        && CompareUtils::compare(score / expected, bestScoreRatio) > 0) {
+    long double bound = getProbBound(ds, i, samplesInfo, score - expected);
+    if (CompareUtils::compare(score, expected) > 0
+        && CompareUtils::compare(bound, 0.5) < 0
+        && CompareUtils::compare(bound, bestBound) < 0) {
       bestAttrib = i;
-      bestScoreRatio = score / expected;
+      bestBound = bound;
     }
   }
 
@@ -74,7 +77,7 @@ long double PairTree::getAttribScore(DataSet& ds, int64_t attribInx, std::vector
     totalClass[s.bestClass]--;
     totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]--;
   }
-  return score / totPairs;
+  return score;
 }
 
 
@@ -117,7 +120,30 @@ std::pair<long double, long double> PairTree::getRandomScore(DataSet& ds, int64_
   var = var / totPairs;
   long double std = sqrt(var);
 
-  return std::make_pair(expected, std);
+  return std::make_pair(expected*totPairs, std);
+}
+
+long double PairTree::getProbBound(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo, long double value) {
+  int64_t attribSize = ds.getAttributeSize(attribInx);
+  std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
+  // totalValueClass[j][c] = number of samples valued 'j' at 'attribInx' whose class is 'c'
+  std::vector<std::vector<int64_t>> totalValueClass(attribSize, std::vector<int64_t>(2, 0));
+
+  for (auto s : samplesInfo) {
+    totalClass[s.bestClass]++;
+    totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]++;
+  }
+  long double xstar = std::max(totalClass[0], totalClass[1]);
+
+  long double sumSqBounds = 0;
+  for (auto s : samplesInfo) {
+    int notBestClass = (s.bestClass + 1) % 2;
+    sumSqBounds += (s.diff * s.diff) * (totalClass[notBestClass] - totalValueClass[s.ptr->inxValue_[attribInx]][notBestClass]);
+    totalClass[s.bestClass]--;
+    totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]--;
+  }
+
+  return std::exp((-2.0 * value * value) / (xstar * sumSqBounds));
 }
 
 bool compareSampleInfo(const PairTree::SampleInfo& a, const PairTree::SampleInfo& b) {
