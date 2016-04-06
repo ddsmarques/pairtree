@@ -52,8 +52,9 @@ void Trainer::train(std::string fileName) {
   }
   else if (config->trainMode->type == ConfigTrainMode::trainType::RANDOM_SPLIT) {
     trainDS = builder.buildFromFile(config->dataSetFile, config->classColStart);
-    testDS;
     testDS.initAllAttributes(trainDS);
+  } else if (config->trainMode->type == ConfigTrainMode::trainType::SPLIT) {
+    trainDS = builder.buildFromFile(config->dataSetFile, config->classColStart);
   }
 
   for (int64_t i = 0; i < config->configTrees.size(); i++) {
@@ -64,6 +65,14 @@ void Trainer::train(std::string fileName) {
         score += runTree(config, i, trainDS, testDS);
       }
       score = score / config->trainMode->folds;
+    } else if (config->trainMode->type == ConfigTrainMode::trainType::SPLIT) {
+      for (int fold = 0; fold < config->trainMode->folds; fold++) {
+        DataSet currTrain, currTest;
+        currTrain.initAllAttributes(trainDS);
+        currTest.initAllAttributes(trainDS);
+        getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold+1);
+        score += runTree(config, i, currTrain, currTest);
+      }
     } else {
       score = runTree(config, i, trainDS, testDS);
     }
@@ -97,6 +106,33 @@ void Trainer::getRandomSplit(DataSet& trainDS, DataSet& testDS, double ratio) {
     trainDS.eraseSample(it);
   }
 }
+
+
+void Trainer::getSplit(DataSet& originalDS, DataSet& currTrain,
+                       DataSet& currTest, std::string fileName,
+                       int fold) {
+  std::string trainName = fileName + "_train_" + std::to_string(fold);
+  std::string testName = fileName + "_test_" + std::to_string(fold);
+  loadSplit(originalDS, currTrain, trainName);
+  loadSplit(originalDS, currTest, testName);
+}
+
+
+void Trainer::loadSplit(DataSet& originalDS, DataSet& current, std::string fileName) {
+  std::ifstream file(fileName);
+  int64_t totSamples = 0;
+  file >> totSamples;
+  while (totSamples > 0) {
+    int64_t inx;
+    file >> inx;
+    auto it = originalDS.samples_.begin();
+    std::advance(it, inx);
+    current.samples_.push_back(*it);
+
+    totSamples--;
+  }
+}
+
 
 double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
                         DataSet& trainDS, DataSet& testDS) {

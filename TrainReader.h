@@ -15,7 +15,7 @@ extern "C" {
 
 class ConfigTrainMode {
 public:
-  enum class trainType {RANDOM_SPLIT, TEST_SET, TRAINING_SET};
+  enum class trainType {RANDOM_SPLIT, SPLIT, TEST_SET, TRAINING_SET};
 
   trainType type;
   std::string testFileName;

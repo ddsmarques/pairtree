@@ -3,6 +3,7 @@
 #include "GreedyBBTree.h"
 #include "GreedyDrawTree.h"
 #include "GreedyTree.h"
+#include "Logger.h"
 #include "PairTree.h"
 #include "PineTree.h"
 
@@ -31,6 +32,10 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       config->trainMode = std::make_shared<ConfigTrainMode>();
       config->trainMode->type = ConfigTrainMode::trainType::RANDOM_SPLIT;
       config->trainMode->ratio = getVar<double>(trainMode, "ratio");
+      config->trainMode->folds = getVar<int>(trainMode, "folds");
+    } else if (auxType.compare("split") == 0) {
+      config->trainMode = std::make_shared<ConfigTrainMode>();
+      config->trainMode->type = ConfigTrainMode::trainType::SPLIT;
       config->trainMode->folds = getVar<int>(trainMode, "folds");
     } else if (auxType.compare("testset") == 0) {
       config->trainMode = std::make_shared<ConfigTrainMode>();
