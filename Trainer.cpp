@@ -26,7 +26,7 @@ void Trainer::train(std::string fileName) {
 
   // Create time log file
   Logger::setOutput(outputFolder_ + "log.txt");
-  Logger::log("Test name: " + config->name);
+  Logger::log() << "Test name: " << config->name;
 
   // Copy input file
   cmd = "copy " + fileName + " " + outputFolder_;
@@ -102,7 +102,7 @@ double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
                         DataSet& trainDS, DataSet& testDS) {
   // Log starting test
   auto start = std::chrono::system_clock::now();
-  Logger::log("Starting test " + config->configTrees[treeInx]->name);
+  Logger::log() << "Starting test " << config->configTrees[treeInx]->name;
 
   // Create model output file
   std::string outputFileName = outputFolder_ + "outputTree_" + config->configTrees[treeInx]->name + ".txt";
@@ -117,9 +117,9 @@ double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
   double score = tester.test(tree, testDS, outputFileName);
 
   // Log finishing test
-  Logger::log("Finished test " + config->configTrees[treeInx]->name);
+  Logger::log() << "Finished test " << config->configTrees[treeInx]->name;
   int64_t countSeconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
-  Logger::log("Elapsed time in seconds " + std::to_string(countSeconds));
+  Logger::log() << "Elapsed time in seconds " << std::to_string(countSeconds);
 
   return score;
 }

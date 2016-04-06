@@ -6,7 +6,7 @@
 #include <sstream>
 
 std::vector<std::vector<std::string>> ReadCSV::readFile(std::string fileName) {
-  Logger::log("Started reading file " + fileName);
+  Logger::log() << "Started reading file " << fileName;
   std::vector<std::vector<std::string>> ans;
 
   std::ifstream file(fileName);
@@ -16,7 +16,7 @@ std::vector<std::vector<std::string>> ReadCSV::readFile(std::string fileName) {
       ans.push_back(row);
     }
   }
-  Logger::log("Finished reading file " + fileName);
+  Logger::log() << "Finished reading file " << fileName;
   return ans;
 }
 

@@ -26,7 +26,8 @@ void Logger::closeOutput() {
 }
 
 
-void Logger::log(std::string msg) {
+std::ostream& Logger::log() {
   std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  out_ << std::put_time(std::localtime(&now), "%Y-%m-%d_%H-%M-%S") << ": " << msg << std::endl;
+  out_ << std::endl << std::put_time(std::localtime(&now), "%Y-%m-%d_%H-%M-%S") << ": ";
+  return out_;
 }

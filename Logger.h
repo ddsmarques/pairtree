@@ -5,7 +5,7 @@ class Logger {
 public:
   static void setOutput(std::string fileName);
   static void closeOutput();
-  static void log(std::string msg);
+  static std::ostream& log();
 
 private:
   static std::ostream out_;
