@@ -18,16 +18,16 @@ std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTree(DataSet& ds, std::s
 
   std::shared_ptr<ConfigGreedyDraw> config = std::static_pointer_cast<ConfigGreedyDraw>(c);
   std::vector<bool> availableAttrib(ds.getTotAttributes(), true);
-  return createTreeRec(ds, config->height, config->totDraws, availableAttrib);
+  return createTreeRec(ds, config->height, config->totDraws, config->minLeaf, availableAttrib);
 }
 
 
-std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTreeRec(DataSet& ds,
-                                                                int64_t height, int totDraws,
+std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTreeRec(DataSet& ds, int64_t height,
+                                                                int totDraws, int64_t minLeaf,
                                                                 std::vector<bool> availableAttrib) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
-  if (height == 0) {
+  if (height == 0 || ds.samples_.size() <= minLeaf) {
     return createLeaf(ds);
   }
 
@@ -56,7 +56,7 @@ std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTreeRec(DataSet& ds,
 
   std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, bestAttrib);
   for (int64_t j = 0; j < bestAttribSize; j++) {
-    node->addChild(createTreeRec(allDS[j], height - 1, totDraws, availableAttrib), { j });
+    node->addChild(createTreeRec(allDS[j], height - 1, totDraws, minLeaf, availableAttrib), { j });
   }
   return node;
 }

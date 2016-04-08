@@ -87,6 +87,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigGreedy> gtConfig = std::make_shared<ConfigGreedy>();
       gtConfig->height = getVar<int>(tree, "height");
       gtConfig->name = getVar<std::string>(tree, "name");
+      gtConfig->minLeaf = getVar<int>(tree, "minLeaf");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
 
       std::shared_ptr<GreedyTree> greedy = std::make_shared<GreedyTree>();
@@ -107,6 +108,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       drawConfig->height = getVar<int>(tree, "height");
       drawConfig->name = getVar<std::string>(tree, "name");
       drawConfig->totDraws = getVar<int>(tree, "totDraws");
+      drawConfig->minLeaf = getVar<int>(tree, "minLeaf");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(drawConfig));
 
       std::shared_ptr<GreedyDrawTree> greedyDraw = std::make_shared<GreedyDrawTree>();
@@ -117,6 +119,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       pairConfig->height = getVar<int>(tree, "height");
       pairConfig->name = getVar<std::string>(tree, "name");
       pairConfig->maxBound = getVar<double>(tree, "maxBound");
+      pairConfig->minLeaf = getVar<int>(tree, "minLeaf");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(pairConfig));
 
       std::shared_ptr<PairTree> pairTree = std::make_shared<PairTree>();

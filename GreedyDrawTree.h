@@ -8,6 +8,7 @@
 class ConfigGreedyDraw : public ConfigTree {
 public:
   int totDraws;
+  int64_t minLeaf;
 };
 
 class GreedyDrawTree : public Tree {
@@ -16,7 +17,7 @@ public:
 
 private:
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height,
-                                                  int totDraws,
+                                                  int totDraws, int64_t minLeaf,
                                                   std::vector<bool> availableAttrib);
   bool isGoodAttribute(DataSet& ds, int64_t attribInx, int totDraws);
   double getRandomAttribute(DataSet& ds, int64_t attribInx);

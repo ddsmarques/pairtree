@@ -10,12 +10,13 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
   ErrorUtils::enforce(ds.getTotClasses() == 2, "Error! Number of classes must be 2.");
   
   std::shared_ptr<ConfigPairTree> config = std::static_pointer_cast<ConfigPairTree>(c);
-  return createTreeRec(ds, config->height, config->maxBound);
+  return createTreeRec(ds, config->height, config->maxBound, config->minLeaf);
 }
 
 
-std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height, double maxBound) {
-  if (height == 0) {
+std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height,
+                                                          double maxBound, int64_t minLeaf) {
+  if (height == 0 || ds.samples_.size() <= minLeaf) {
     return createLeaf(ds);
   }
 
@@ -52,7 +53,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 
   std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, bestAttrib);
   for (int64_t j = 0; j < bestAttribSize; j++) {
-    node->addChild(createTreeRec(allDS[j], height - 1, maxBound), { j });
+    node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf), { j });
   }
   return node;
 }

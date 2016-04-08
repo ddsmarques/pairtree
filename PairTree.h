@@ -7,6 +7,7 @@
 class ConfigPairTree : public ConfigTree {
 public:
   double maxBound;
+  int64_t minLeaf;
 };
 
 class PairTree : public Tree {
@@ -20,7 +21,8 @@ public:
   };
 
 private:
-  std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int height, double maxBound);
+  std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int height,
+                                                  double maxBound, int64_t minLeaf);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
   long double getAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
   std::pair<long double, long double> getRandomScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
