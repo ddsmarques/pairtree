@@ -27,7 +27,7 @@ std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTreeRec(DataSet& ds, int
                                                                 std::vector<bool> availableAttrib) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
-  if (height == 0 || ds.samples_.size() <= minLeaf) {
+  if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
 

@@ -17,7 +17,7 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
                                                             std::vector<bool> availableAttrib) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
-  if (height == 0 || ds.samples_.size() <= minLeaf) {
+  if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     auto best = ds.getBestClass();
 
     std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);

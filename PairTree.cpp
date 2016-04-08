@@ -16,7 +16,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
 
 std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height,
                                                           double maxBound, int64_t minLeaf) {
-  if (height == 0 || ds.samples_.size() <= minLeaf) {
+  if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
 
