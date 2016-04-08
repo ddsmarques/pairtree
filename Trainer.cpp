@@ -59,10 +59,13 @@ void Trainer::train(std::string fileName) {
 
   for (int64_t i = 0; i < config->configTrees.size(); i++) {
     double score = 0;
+    int64_t totSeconds = 0;
     if (config->trainMode->type == ConfigTrainMode::trainType::RANDOM_SPLIT) {
       for (int fold = 0; fold < config->trainMode->folds; fold++) {
         getRandomSplit(trainDS, testDS, config->trainMode->ratio);
-        score += runTree(config, i, trainDS, testDS);
+        auto result = runTree(config, i, trainDS, testDS);
+        score += result.first;
+        totSeconds += result.second;
       }
       score = score / config->trainMode->folds;
     } else if (config->trainMode->type == ConfigTrainMode::trainType::SPLIT) {
@@ -71,12 +74,17 @@ void Trainer::train(std::string fileName) {
         currTrain.initAllAttributes(trainDS);
         currTest.initAllAttributes(trainDS);
         getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold+1);
-        score += runTree(config, i, currTrain, currTest);
+        auto result = runTree(config, i, currTrain, currTest);
+        score += result.first;
+        totSeconds += result.second;
       }
       score = score / config->trainMode->folds;
     } else {
-      score = runTree(config, i, trainDS, testDS);
+      auto result = runTree(config, i, trainDS, testDS);
+      score = result.first;
+      totSeconds += result.second;
     }
+    Logger::log() << "Total elapsed time (s): " << totSeconds;
 
     // Log score
     summaryFile.open(summaryFileName, std::ofstream::app);
@@ -135,8 +143,8 @@ void Trainer::loadSplit(DataSet& originalDS, DataSet& current, std::string fileN
 }
 
 
-double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
-                        DataSet& trainDS, DataSet& testDS) {
+std::pair<double, int64_t> Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
+                                            DataSet& trainDS, DataSet& testDS) {
   // Log starting test
   auto start = std::chrono::system_clock::now();
   Logger::log() << "Starting test " << config->configTrees[treeInx]->name;
@@ -156,8 +164,8 @@ double Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
   // Log finishing test
   Logger::log() << "Finished test " << config->configTrees[treeInx]->name;
   int64_t countSeconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
-  Logger::log() << "Elapsed time in seconds " << std::to_string(countSeconds);
+  Logger::log() << "Elapsed time in seconds " << countSeconds;
 
-  return score;
+  return std::make_pair(score, countSeconds);
 }
 

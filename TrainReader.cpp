@@ -116,6 +116,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigPairTree> pairConfig = std::make_shared<ConfigPairTree>();
       pairConfig->height = getVar<int>(tree, "height");
       pairConfig->name = getVar<std::string>(tree, "name");
+      pairConfig->maxBound = getVar<double>(tree, "maxBound");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(pairConfig));
 
       std::shared_ptr<PairTree> pairTree = std::make_shared<PairTree>();

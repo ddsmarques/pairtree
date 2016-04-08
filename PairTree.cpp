@@ -10,11 +10,11 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
   ErrorUtils::enforce(ds.getTotClasses() == 2, "Error! Number of classes must be 2.");
   
   std::shared_ptr<ConfigPairTree> config = std::static_pointer_cast<ConfigPairTree>(c);
-  return createTreeRec(ds, config->height);
+  return createTreeRec(ds, config->height, config->maxBound);
 }
 
 
-std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height) {
+std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height, double maxBound) {
   if (height == 0) {
     return createLeaf(ds);
   }
@@ -30,7 +30,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     long double expected = randScore.first;
     long double bound = getProbBound(ds, i, samplesInfo, score - expected);
     if (CompareUtils::compare(score, expected) > 0
-        && CompareUtils::compare(bound, 0.5) < 0
+        && CompareUtils::compare(bound, maxBound) < 0
         && CompareUtils::compare(bound, bestBound) < 0) {
       bestAttrib = i;
       bestBound = bound;
@@ -52,7 +52,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 
   std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, bestAttrib);
   for (int64_t j = 0; j < bestAttribSize; j++) {
-    node->addChild(createTreeRec(allDS[j], height - 1), { j });
+    node->addChild(createTreeRec(allDS[j], height - 1, maxBound), { j });
   }
   return node;
 }
