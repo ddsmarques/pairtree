@@ -90,35 +90,29 @@ std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
 
 
 std::pair<long double, int64_t> PairTree::testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
-  std::vector<double> distrib;
-  long double score;
-  int64_t separator = -1;
+  long double nominalBound = 1;
+  long double orderedBound = 1;
+  
+  AttribScoreResult nominalResults = getNominalAttribScore(ds, attribInx, samplesInfo);
+  nominalBound = getAttribBound(nominalResults, attribInx, samplesInfo);
 
-  if (ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
-    auto aux = getOrderedAttribScore(ds, attribInx, samplesInfo);
-    score = aux.first.first;
-    distrib = aux.first.second;
-    separator = aux.second;
-  } else {
-    auto aux = getNominalAttribScore(ds, attribInx, samplesInfo);
-    score = aux.first;
-    distrib = aux.second;
-  }
+  if (ds.getAttributeType(attribInx) == AttributeType::INTEGER
+      || ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
+    AttribScoreResult orderedResults = getOrderedAttribScore(ds, attribInx, samplesInfo);
+    orderedBound = getAttribBound(orderedResults, attribInx, samplesInfo);
 
-  auto aux = getRandomScore(samplesInfo, distrib);
-  long double expected = aux.first;
-  long double bound = getProbBound(attribInx, distrib.size(), samplesInfo, score - expected, separator);
-  if (CompareUtils::compare(score, expected) > 0) {
-    return std::make_pair(bound, separator);
+    if (CompareUtils::compare(orderedBound, nominalBound) < 0) {
+      return std::make_pair(orderedBound, orderedResults.separator);
+    }
   }
-  return std::make_pair(1, separator);
+  return std::make_pair(nominalBound, -1);
 }
 
 
-std::pair<long double, std::vector<double>> PairTree::getNominalAttribScore(DataSet& ds, int64_t attribInx,
+PairTree::AttribScoreResult PairTree::getNominalAttribScore(DataSet& ds, int64_t attribInx,
                                                                             std::vector<PairTree::SampleInfo>& samplesInfo) {
   int64_t attribSize = ds.getAttributeSize(attribInx);
-  std::vector<double> distrib(samplesInfo.size());
+  std::vector<double> distrib(attribSize);
   for (int64_t i = 0; i < samplesInfo.size(); i++) {
     distrib[samplesInfo[i].ptr->inxValue_[attribInx]]++;
   }
@@ -144,11 +138,16 @@ std::pair<long double, std::vector<double>> PairTree::getNominalAttribScore(Data
     totalClass[s.bestClass]--;
     totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]--;
   }
-  return std::make_pair(score, distrib);
+
+  AttribScoreResult ans;
+  ans.score = score;
+  ans.distrib = distrib;
+  ans.separator = -1;
+  return ans;
 }
 
 
-std::pair<std::pair<long double, std::vector<double>>, int64_t> PairTree::getOrderedAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+PairTree::AttribScoreResult PairTree::getOrderedAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
   long double bestScore = 0;
   int64_t bestLeftSize = 0;
   int64_t bestSeparator = 0;
@@ -237,7 +236,25 @@ std::pair<std::pair<long double, std::vector<double>>, int64_t> PairTree::getOrd
   }
 
   std::vector<double> distrib {bestLeftSize / (double)totSamples, (totSamples - bestLeftSize)/(double)totSamples};
-  return std::make_pair(std::make_pair(bestScore, distrib), bestSeparator);
+  AttribScoreResult ans;
+  ans.score = bestScore;
+  ans.distrib = distrib;
+  ans.separator = bestSeparator;
+  return ans;
+}
+
+
+long double PairTree::getAttribBound(AttribScoreResult& attribResult, int64_t attribInx,
+                                     std::vector<PairTree::SampleInfo>& samplesInfo) {
+  auto aux = getRandomScore(samplesInfo, attribResult.distrib);
+  long double expected = aux.first;
+  long double bound = getProbBound(attribInx, attribResult.distrib.size(),
+                                   samplesInfo, attribResult.score - expected,
+                                   attribResult.separator);
+  if (CompareUtils::compare(attribResult.score, expected) > 0) {
+    return bound;
+  }
+  return 1;
 }
 
 
