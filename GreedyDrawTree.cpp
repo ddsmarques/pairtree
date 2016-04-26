@@ -54,7 +54,8 @@ std::shared_ptr<DecisionTreeNode> GreedyDrawTree::createTreeRec(DataSet& ds, int
     allDS[s->inxValue_[bestAttrib]].addSample(s);
   }
 
-  std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, bestAttrib);
+  std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
+                                                                              bestAttrib);
   for (int64_t j = 0; j < bestAttribSize; j++) {
     node->addChild(createTreeRec(allDS[j], height - 1, totDraws, minLeaf, availableAttrib), { j });
   }

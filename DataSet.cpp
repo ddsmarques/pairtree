@@ -195,8 +195,16 @@ void DataSet::printTree(std::shared_ptr<DecisionTreeNode> root,
 
 void DataSet::printTreeRec(std::shared_ptr<DecisionTreeNode> node,
                            std::ofstream& ofs, std::string prefix) {
+  ErrorUtils::enforce(node != nullptr, "Error: Invalid node in printTreeRec.");
   if (node->getType() == DecisionTreeNode::NodeType::LEAF) {
     ofs << " : " << getClassValue(node->getLeafValue());
+  } else if (node->getType() == DecisionTreeNode::NodeType::REGULAR_ORDERED) {
+    ofs << std::endl << prefix << getAttributeName(node->getAttribCol())
+        << " <= " << getAttributeStringValue(node->getAttribCol(), node->getSeparator());
+    printTreeRec(node->getLeftChild(), ofs, prefix + "| ");
+    ofs << std::endl << prefix << getAttributeName(node->getAttribCol())
+        << " > " << getAttributeStringValue(node->getAttribCol(), node->getSeparator());
+    printTreeRec(node->getRightChild(), ofs, prefix + "| ");
   } else {
     for (const auto& child : node->children_) {
       ofs << std::endl << prefix << getAttributeName(node->getAttribCol())

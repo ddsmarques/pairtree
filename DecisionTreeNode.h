@@ -14,9 +14,9 @@
 
 class DecisionTreeNode {
 public:
-  enum class NodeType {REGULAR, LEAF};
+  enum class NodeType {REGULAR_NOMINAL, REGULAR_ORDERED, LEAF};
 
-  DecisionTreeNode(NodeType type, int64_t attribCol = -1);
+  DecisionTreeNode(NodeType type, int64_t attribCol = -1, int64_t splitValue = -1);
 
   void setLeafValue(int64_t leafValue);
 
@@ -32,7 +32,17 @@ public:
 
   int64_t getLeafValue();
 
+  int64_t getSeparator();
+
+  std::shared_ptr<DecisionTreeNode> getLeftChild();
+
+  std::shared_ptr<DecisionTreeNode> getRightChild();
+
   void addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v);
+
+  void addLeftChild(std::shared_ptr<DecisionTreeNode> child);
+
+  void addRightChild(std::shared_ptr<DecisionTreeNode> child);
 
   int64_t classify(std::shared_ptr<Sample> s);
 
@@ -41,8 +51,11 @@ public:
   std::map<int64_t, std::shared_ptr<DecisionTreeNode>> children_;
 
 private:
+  std::map<int64_t, std::shared_ptr<DecisionTreeNode>>::iterator findChild(int64_t inxValue);
+
   std::string name_;
   NodeType type_;
   int64_t attribCol_;
   int64_t leafValue_;
+  int64_t splitValue_;
 };

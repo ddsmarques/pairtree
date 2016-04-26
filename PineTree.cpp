@@ -532,7 +532,8 @@ std::shared_ptr<DecisionTreeNode> PineTree::mountBackbone(DataSet& ds, int64_t b
 }
 
 std::shared_ptr<DecisionTreeNode> PineTree::mountBackboneLevel(DataSet& ds, int64_t level, int64_t bbSize) {
-  std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR, nodeAttrib_[level]);
+  std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
+                                                                              nodeAttrib_[level]);
   node->setName("(" + std::to_string(level) + ", " + std::to_string(nodeAttrib_[level]) + ")");
   for (int64_t h = 0; h < nodeLeaves_[level].size(); h++) {
     if (nodeLeaves_[level][h] != -1) {

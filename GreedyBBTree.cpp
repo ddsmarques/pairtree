@@ -119,7 +119,7 @@ std::pair<std::shared_ptr<DecisionTreeNode>, double> GreedyBBTree::createBB(Data
   std::shared_ptr<DecisionTreeNode> prev = nullptr;
   for (int i = 0; i < state.size(); i++) {
     std::shared_ptr<DecisionTreeNode> curr =
-      std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR,
+      std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
                                          state[i].first);
     for (int j = 0; j < currDS.getAttributeSize(state[i].first); j++) {
       if (j != state[i].second || i == state.size() - 1) {
