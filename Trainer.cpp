@@ -58,7 +58,7 @@ void Trainer::train(std::string fileName) {
   }
 
   for (int64_t i = 0; i < config->configTrees.size(); i++) {
-    double score = 0;
+    long double score = 0;
     int64_t totSeconds = 0;
     if (config->trainMode->type == ConfigTrainMode::trainType::RANDOM_SPLIT) {
       for (int fold = 0; fold < config->trainMode->folds; fold++) {
@@ -88,7 +88,9 @@ void Trainer::train(std::string fileName) {
 
     // Log score
     summaryFile.open(summaryFileName, std::ofstream::app);
-    summaryFile << config->configTrees[i]->name << " " << score << std::endl;
+    summaryFile << config->configTrees[i]->name << " "
+                << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                << score << std::endl;
     summaryFile.close();
   }
 
@@ -143,8 +145,8 @@ void Trainer::loadSplit(DataSet& originalDS, DataSet& current, std::string fileN
 }
 
 
-std::pair<double, int64_t> Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
-                                            DataSet& trainDS, DataSet& testDS) {
+std::pair<long double, int64_t> Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
+                                                 DataSet& trainDS, DataSet& testDS) {
   // Log starting test
   auto start = std::chrono::system_clock::now();
   Logger::log() << "Starting test " << config->configTrees[treeInx]->name;
@@ -159,7 +161,7 @@ std::pair<double, int64_t> Trainer::runTree(std::shared_ptr<ConfigTrain>& config
   std::shared_ptr<DecisionTreeNode> tree = config->trees[treeInx]->createTree(trainDS, config->configTrees[treeInx]);
   trainDS.printTree(tree, outputFileName);
   Tester tester;
-  double score = tester.test(tree, testDS, outputFileName);
+  long double score = tester.test(tree, testDS, outputFileName);
 
   // Log finishing test
   Logger::log() << "Finished test " << config->configTrees[treeInx]->name;

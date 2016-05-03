@@ -6,6 +6,6 @@
 
 class Tester {
 public:
-  double test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
-              std::string outputFileName);
+  long double test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
+                   std::string outputFileName);
 };

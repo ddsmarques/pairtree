@@ -13,8 +13,8 @@ private:
                 DataSet& currTest, std::string fileName,
                 int fold);
   void loadSplit(DataSet& originalDS, DataSet& current, std::string fileName);
-  std::pair<double, int64_t> runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
-                                     DataSet& trainDS, DataSet& testDS);
+  std::pair<long double, int64_t> runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
+                                          DataSet& trainDS, DataSet& testDS);
 
   std::string outputFolder_;
 };
