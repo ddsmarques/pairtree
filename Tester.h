@@ -6,6 +6,10 @@
 
 class Tester {
 public:
-  long double test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
+  struct TestResults {
+    long double score;
+    long double savings;
+  };
+  TestResults test(std::shared_ptr<DecisionTreeNode> tree, DataSet& ds,
                    std::string outputFileName);
 };
