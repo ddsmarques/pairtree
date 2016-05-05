@@ -52,7 +52,7 @@ DataSet DataSetBuilder::buildFromFile(std::string fileName,
       s->benefit_[ds.getClassInx(rawFile[i][totAttrib])] = 1;
     } else {
       for (int j = classColStart; j < rawFile[i].size(); j++) {
-        s->benefit_[j - classColStart] = Converter::fromString<double>(rawFile[i][j]);
+        s->benefit_[j - classColStart] = -Converter::fromString<double>(rawFile[i][j]);
       }
     }
     ds.addSample(s);

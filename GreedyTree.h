@@ -26,4 +26,5 @@ private:
   long double getNominalScore(DataSet& ds, int64_t attribInx);
   std::pair<long double, int64_t> getOrderedScore(DataSet& ds, int64_t attribInx,
                                                   int64_t percentiles);
+  std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
 };

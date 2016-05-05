@@ -21,13 +21,7 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
-    auto best = ds.getBestClass();
-
-    std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
-    leaf->setName("LEAF " + std::to_string(best.first));
-    leaf->setLeafValue(best.first);
-
-    return leaf;
+    return createLeaf(ds);
   }
 
   int64_t bestAttrib = -1;
@@ -45,6 +39,9 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
         bestSeparator = separator;
       }
     }
+  }
+  if (bestAttrib == -1) {
+    return createLeaf(ds);
   }
   availableAttrib[bestAttrib] = false;
 
@@ -142,7 +139,7 @@ std::pair<long double, int64_t> GreedyTree::getOrderedScore(DataSet& ds, int64_t
     }
 
     int64_t nextLimit = ord[limit].attribValue + step;
-    while (limit < ord.size() && ord[limit].attribValue <= nextLimit) {
+    while (limit < ord.size() && ord[limit].attribValue < nextLimit) {
       leftScore[0] += ord[limit].benefit[0];
       leftScore[1] += ord[limit].benefit[1];
       rightScore[0] -= ord[limit].benefit[0];
@@ -150,5 +147,16 @@ std::pair<long double, int64_t> GreedyTree::getOrderedScore(DataSet& ds, int64_t
       limit++;
     }
   }
-  return std::make_pair(bestScore, bestSeparator);
+  return std::make_pair(bestScore, bestSeparator-1);
+}
+
+
+std::shared_ptr<DecisionTreeNode> GreedyTree::createLeaf(DataSet& ds) {
+  auto best = ds.getBestClass();
+
+  std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
+  leaf->setName("LEAF " + std::to_string(best.first));
+  leaf->setLeafValue(best.first);
+
+  return leaf;
 }

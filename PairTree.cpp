@@ -248,11 +248,10 @@ long double PairTree::getAttribBound(AttribScoreResult& attribResult, int64_t at
                                      std::vector<PairTree::SampleInfo>& samplesInfo) {
   auto aux = getRandomScore(samplesInfo, attribResult.distrib);
   long double expected = aux.first;
-  long double bound = getProbBound(attribInx, attribResult.distrib.size(),
-                                   samplesInfo, attribResult.score - expected,
-                                   attribResult.separator);
-  if (CompareUtils::compare(attribResult.score, expected) > 0) {
-    return bound;
+  if (CompareUtils::compare(attribResult.score, expected, 1e-7) > 0) {
+    return getProbBound(attribInx, attribResult.distrib.size(),
+                        samplesInfo, attribResult.score - expected,
+                        attribResult.separator);
   }
   return 1;
 }
@@ -317,6 +316,10 @@ long double PairTree::getProbBound(int64_t attribInx, int64_t attribSize,
     totalValueClass[getBinBox(s.ptr->inxValue_[attribInx], separator)][s.bestClass]--;
   }
 
+  // Tries to avoid division by 0
+  if (CompareUtils::compare(xstar * sumSqBounds, 0) == 0) {
+    return 1;
+  }
   return std::exp((-2.0 * value * value) / (xstar * sumSqBounds));
 }
 

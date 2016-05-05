@@ -73,7 +73,7 @@ void Trainer::train(std::string fileName) {
         DataSet currTrain, currTest;
         currTrain.initAllAttributes(trainDS);
         currTest.initAllAttributes(trainDS);
-        getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold+1);
+        getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold);
         auto result = runTree(config, i, currTrain, currTest);
         score += result.first;
         totSeconds += result.second;
@@ -122,8 +122,8 @@ void Trainer::getRandomSplit(DataSet& trainDS, DataSet& testDS, double ratio) {
 void Trainer::getSplit(DataSet& originalDS, DataSet& currTrain,
                        DataSet& currTest, std::string fileName,
                        int fold) {
-  std::string trainName = fileName + "_train_" + std::to_string(fold);
-  std::string testName = fileName + "_test_" + std::to_string(fold);
+  std::string trainName = fileName.substr(0, fileName.size() - 4) + "_train_" + std::to_string(fold) + ".txt";
+  std::string testName = fileName.substr(0, fileName.size() - 4) + "_val_" + std::to_string(fold) + ".txt";
   loadSplit(originalDS, currTrain, trainName);
   loadSplit(originalDS, currTest, testName);
 }
