@@ -90,22 +90,18 @@ std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
 
 
 std::pair<long double, int64_t> PairTree::testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
-  long double nominalBound = 1;
-  long double orderedBound = 1;
-  
-  AttribScoreResult nominalResults = getNominalAttribScore(ds, attribInx, samplesInfo);
-  nominalBound = getAttribBound(nominalResults, attribInx, samplesInfo);
-
   if (ds.getAttributeType(attribInx) == AttributeType::INTEGER
       || ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
     AttribScoreResult orderedResults = getOrderedAttribScore(ds, attribInx, samplesInfo);
-    orderedBound = getAttribBound(orderedResults, attribInx, samplesInfo);
+    long double orderedBound = getAttribBound(orderedResults, attribInx, samplesInfo);
 
-    if (CompareUtils::compare(orderedBound, nominalBound) < 0) {
-      return std::make_pair(orderedBound, orderedResults.separator);
-    }
+    return std::make_pair(orderedBound, orderedResults.separator);
+  } else {
+    AttribScoreResult nominalResults = getNominalAttribScore(ds, attribInx, samplesInfo);
+    long double nominalBound = getAttribBound(nominalResults, attribInx, samplesInfo);
+
+    return std::make_pair(nominalBound, -1);
   }
-  return std::make_pair(nominalBound, -1);
 }
 
 
