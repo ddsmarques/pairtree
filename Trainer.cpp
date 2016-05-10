@@ -138,14 +138,22 @@ void Trainer::loadSplit(DataSet& originalDS, DataSet& current, std::string fileN
   std::ifstream file(fileName);
   int64_t totSamples = 0;
   file >> totSamples;
-  while (totSamples > 0) {
-    int64_t inx;
-    file >> inx;
-    auto it = originalDS.samples_.begin();
-    std::advance(it, inx);
-    current.samples_.push_back(*it);
+  // Add all indexes to a vector and sorts it
+  std::vector<int64_t> indexes(totSamples);
+  for (int64_t i = 0; i < totSamples; i++) {
+    file >> indexes[i];
+  }
+  std::sort(indexes.begin(), indexes.end());
 
-    totSamples--;
+  // Creates dataset in O(N)
+  auto it = originalDS.samples_.begin();
+  for (int64_t i = 0; i < totSamples; i++) {
+    if (i == 0) {
+      std::advance(it, indexes[i]);
+    } else {
+      std::advance(it, indexes[i] - indexes[i-1]);
+    }
+    current.samples_.push_back(*it);
   }
 }
 
