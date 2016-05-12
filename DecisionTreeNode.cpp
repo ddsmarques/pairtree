@@ -59,6 +59,29 @@ std::shared_ptr<DecisionTreeNode> DecisionTreeNode::getRightChild() {
 }
 
 
+int64_t DecisionTreeNode::getSize() {
+  if (type_ == NodeType::LEAF) {
+    return 1;
+  } else if (type_ == NodeType::REGULAR_ORDERED) {
+    int64_t leftSize = 0;
+    int64_t rightSize = 0;
+    if (children_.find(0) != children_.end()) {
+      leftSize = children_[0]->getSize();
+    }
+    if (children_.find(1) != children_.end()) {
+      rightSize = children_[1]->getSize();
+    }
+    return 1 + leftSize + rightSize;
+  } else {
+    int64_t size = 1;
+    for (auto it = children_.begin(); it != children_.end(); it++) {
+      size += it->second->getSize();
+    }
+    return size;
+  }
+}
+
+
 void DecisionTreeNode::addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v) {
   ErrorUtils::enforce(type_ == NodeType::REGULAR_NOMINAL,
                       "Can only add a nominal child to a REGULAR_NOMINAL node.");

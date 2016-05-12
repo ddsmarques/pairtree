@@ -29,5 +29,8 @@ Tester::TestResults Tester::test(std::shared_ptr<DecisionTreeNode> tree, DataSet
   ofs << "Savings "
       << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
       << result.savings << std::endl;
+  ofs << "Size "
+      << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+      << tree->getSize() << std::endl;
   return result;
 }

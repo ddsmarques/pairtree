@@ -60,6 +60,7 @@ void Trainer::train(std::string fileName) {
   for (int64_t i = 0; i < config->configTrees.size(); i++) {
     long double score = 0;
     long double savings = 0;
+    double size = 0;
     int64_t totSeconds = 0;
     if (config->trainMode->type == ConfigTrainMode::trainType::RANDOM_SPLIT) {
       for (int fold = 0; fold < config->trainMode->folds; fold++) {
@@ -67,9 +68,12 @@ void Trainer::train(std::string fileName) {
         auto result = runTree(config, i, trainDS, testDS);
         score += result.score;
         savings += result.savings;
+        size += result.size;
         totSeconds += result.seconds;
       }
       score = score / config->trainMode->folds;
+      savings = savings / config->trainMode->folds;
+      size = size / config->trainMode->folds;
     } else if (config->trainMode->type == ConfigTrainMode::trainType::SPLIT) {
       for (int fold = 0; fold < config->trainMode->folds; fold++) {
         DataSet currTrain, currTest;
@@ -79,23 +83,28 @@ void Trainer::train(std::string fileName) {
         auto result = runTree(config, i, currTrain, currTest);
         score += result.score;
         savings += result.savings;
+        size += result.size;
         totSeconds += result.seconds;
       }
       score = score / config->trainMode->folds;
       savings = savings / config->trainMode->folds;
+      size = size / config->trainMode->folds;
     } else {
       auto result = runTree(config, i, trainDS, testDS);
       score = result.score;
-      savings += result.savings;
-      totSeconds += result.seconds;
+      savings = result.savings;
+      size = result.size;
+      totSeconds = result.seconds;
     }
     Logger::log() << "Total elapsed time (s): " << totSeconds;
 
     // Log score
     summaryFile.open(summaryFileName, std::ofstream::app);
-    summaryFile << config->configTrees[i]->name << " "
+    summaryFile << config->configTrees[i]->name << std::endl
                 << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
-                << score << " " << savings << std::endl;
+                << score << std::endl
+                << savings << std::endl
+                << size << std::endl;
     summaryFile.close();
   }
 
@@ -184,6 +193,7 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   TreeResult treeResult;
   treeResult.score = testResult.score;
   treeResult.savings = testResult.savings;
+  treeResult.size = tree->getSize();
   treeResult.seconds = countSeconds;
   return treeResult;
 }

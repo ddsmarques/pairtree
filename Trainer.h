@@ -16,6 +16,7 @@ private:
   struct TreeResult {
     long double score;
     long double savings;
+    int64_t size;
     int64_t seconds;
   };
   TreeResult runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,

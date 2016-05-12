@@ -38,6 +38,8 @@ public:
 
   std::shared_ptr<DecisionTreeNode> getRightChild();
 
+  int64_t getSize();
+
   void addChild(std::shared_ptr<DecisionTreeNode> child, std::vector<int64_t> v);
 
   void addLeftChild(std::shared_ptr<DecisionTreeNode> child);
