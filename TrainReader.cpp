@@ -121,6 +121,12 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       pairConfig->name = getVar<std::string>(tree, "name");
       pairConfig->maxBound = getVar<double>(tree, "maxBound");
       pairConfig->minLeaf = getVar<int>(tree, "minLeaf");
+      luabridge::LuaRef alphas = tree["alphas"];
+      int i = 0;
+      while (!alphas[i].isNil()) {
+        pairConfig->alphas.push_back(getVar<double>(alphas, i));
+        i++;
+      }
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(pairConfig));
 
       std::shared_ptr<PairTree> pairTree = std::make_shared<PairTree>();

@@ -1,8 +1,11 @@
 #include "Trainer.h"
 
+#include "CompareUtils.h"
 #include "DataSet.h"
 #include "DataSetBuilder.h"
 #include "Logger.h"
+#include "PairTree.h"
+#include "PairTreeNode.h"
 #include "Tester.h"
 
 #include <chrono>
@@ -181,9 +184,30 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
 
   // Run test
   std::shared_ptr<DecisionTreeNode> tree = config->trees[treeInx]->createTree(trainDS, config->configTrees[treeInx]);
-  trainDS.printTree(tree, outputFileName);
   Tester tester;
-  auto testResult = tester.test(tree, testDS, outputFileName);
+  Tester::TestResults testResult;
+  if (std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr) {
+    std::shared_ptr<DecisionTreeNode> bestTree = nullptr;
+    long double bestAlpha;
+    for (auto& alpha : std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx])->alphas) {
+      auto alphaTree = std::static_pointer_cast<PairTreeNode>(tree)->getTree(alpha);
+      auto alphaResult = tester.test(alphaTree, testDS);
+
+      if (bestTree == nullptr || CompareUtils::compare(alphaResult.score, testResult.score) > 0) {
+        testResult = alphaResult;
+        bestTree = alphaTree;
+        bestAlpha = alpha;
+      }
+    }
+    trainDS.printTree(bestTree, outputFileName);
+    Logger::log() << "bestAlpha: " << bestAlpha;
+
+  } else {
+    trainDS.printTree(tree, outputFileName);
+    testResult = tester.test(tree, testDS);
+  }
+  tester.saveResult(testResult, outputFileName);
+
 
   // Log finishing test
   Logger::log() << "Finished test " << config->configTrees[treeInx]->name;
@@ -197,4 +221,3 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   treeResult.seconds = countSeconds;
   return treeResult;
 }
-

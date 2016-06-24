@@ -4,6 +4,7 @@
 #include "BIT.h"
 #include "CompareUtils.h"
 #include "Logger.h"
+#include "PairTreeNode.h"
 
 #include <cmath>
 
@@ -44,6 +45,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     return createLeaf(ds);
   }
 
+  // Nominal attribute
   if (bestSeparator == -1) {
     int64_t bestAttribSize = ds.getAttributeSize(bestAttrib);
     std::vector<DataSet> allDS(bestAttribSize);
@@ -54,13 +56,18 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
       allDS[s->inxValue_[bestAttrib]].addSample(s);
     }
 
-    std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    node->setAlpha(bestBound);
+    node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
       node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf), { j });
     }
     return node;
+  // Numeric attribute
   } else {
-    std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
+    std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
+    node->setAlpha(bestBound);
+    node->setLeafValue(ds.getBestClass().first);
     DataSet leftDS, rightDS;
     leftDS.initAllAttributes(ds);
     rightDS.initAllAttributes(ds);

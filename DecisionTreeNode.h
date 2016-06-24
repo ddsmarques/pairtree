@@ -52,7 +52,7 @@ public:
 
   std::map<int64_t, std::shared_ptr<DecisionTreeNode>> children_;
 
-private:
+protected:
   std::map<int64_t, std::shared_ptr<DecisionTreeNode>>::iterator findChild(int64_t inxValue);
 
   std::string name_;

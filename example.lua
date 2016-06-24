@@ -34,3 +34,16 @@ trees[1] = {
 	treeType = "greedy",
 	height = 2
 }
+trees[2] = {
+	name = "pairname",
+	treeType = "pair",
+  maxBound = 1,
+  alphas = {},
+  minLeaf = 50,
+	height = 10
+}
+i = 0
+for alpha=0.1,1,0.05 do
+  trees[0].alphas[i] = alpha
+  i = i + 1
+end

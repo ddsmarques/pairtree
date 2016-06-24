@@ -8,6 +8,7 @@ class ConfigPairTree : public ConfigTree {
 public:
   double maxBound;
   int64_t minLeaf;
+  std::vector<long double> alphas;
 };
 
 class PairTree : public Tree {

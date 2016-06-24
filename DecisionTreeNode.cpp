@@ -7,7 +7,6 @@ DecisionTreeNode::DecisionTreeNode(NodeType type, int64_t attribCol, int64_t spl
   : type_(type), attribCol_(attribCol), splitValue_(splitValue), leafValue_(-1) {}
 
 void DecisionTreeNode::setLeafValue(int64_t leafValue) {
-  ErrorUtils::enforce(type_ == NodeType::LEAF, "Node is not a leaf.");
   leafValue_ = leafValue;
 }
 

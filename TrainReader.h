@@ -43,6 +43,8 @@ private:
   T getVar(luabridge::lua_State* L, std::string name);
   template <typename T>
   T getVar(luabridge::LuaRef& table, std::string name);
+  template <typename T>
+  T getVar(luabridge::LuaRef& table, int index);
   luabridge::LuaRef getTable(luabridge::lua_State* L, std::string name);
 };
 
