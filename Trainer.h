@@ -1,7 +1,9 @@
 #pragma once
 #include <string>
 
+#include "PairTree.h"
 #include "TrainReader.h"
+#include "Tester.h"
 
 class Trainer {
 public:
@@ -21,6 +23,9 @@ private:
   };
   TreeResult runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
                      DataSet& trainDS, DataSet& testDS);
+  Tester::TestResults runPairTree(std::shared_ptr<PairTree> pairTree,
+                                  std::shared_ptr<ConfigPairTree> config,
+                                  DataSet& trainDS, DataSet& testDS);
 
   std::string outputFolder_;
 };

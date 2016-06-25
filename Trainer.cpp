@@ -183,31 +183,19 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   outputFile.close();
 
   // Run test
-  std::shared_ptr<DecisionTreeNode> tree = config->trees[treeInx]->createTree(trainDS, config->configTrees[treeInx]);
   Tester tester;
   Tester::TestResults testResult;
   if (std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr) {
-    std::shared_ptr<DecisionTreeNode> bestTree = nullptr;
-    long double bestAlpha;
-    for (auto& alpha : std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx])->alphas) {
-      auto alphaTree = std::static_pointer_cast<PairTreeNode>(tree)->getTree(alpha);
-      auto alphaResult = tester.test(alphaTree, testDS);
-
-      if (bestTree == nullptr || CompareUtils::compare(alphaResult.score, testResult.score) > 0) {
-        testResult = alphaResult;
-        bestTree = alphaTree;
-        bestAlpha = alpha;
-      }
-    }
-    trainDS.printTree(bestTree, outputFileName);
-    Logger::log() << "bestAlpha: " << bestAlpha;
-
+    testResult = runPairTree(std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]),
+                             std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx]),
+                             trainDS, testDS);
   } else {
+    std::shared_ptr<DecisionTreeNode> tree = config->trees[treeInx]->createTree(trainDS,
+                                                config->configTrees[treeInx]);
     trainDS.printTree(tree, outputFileName);
     testResult = tester.test(tree, testDS);
   }
   tester.saveResult(testResult, outputFileName);
-
 
   // Log finishing test
   Logger::log() << "Finished test " << config->configTrees[treeInx]->name;
@@ -217,7 +205,55 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   TreeResult treeResult;
   treeResult.score = testResult.score;
   treeResult.savings = testResult.savings;
-  treeResult.size = tree->getSize();
+  treeResult.size = testResult.size;
   treeResult.seconds = countSeconds;
   return treeResult;
+}
+
+
+Tester::TestResults Trainer::runPairTree(std::shared_ptr<PairTree> pairTree,
+                                         std::shared_ptr<ConfigPairTree> config,
+                                         DataSet& trainDS, DataSet& testDS) {
+  Tester::TestResults testsResults;
+  testsResults.score = 0;
+  testsResults.savings = 0;
+  testsResults.size = 0;
+
+  Tester tester;
+  std::string alphaSavings = "";
+  std::shared_ptr<PairTreeNode> fullTree = std::static_pointer_cast<PairTreeNode>(
+                                              pairTree->createTree(trainDS, config));
+  for (auto& alpha : config->alphas) {
+    auto alphaTree = fullTree->getTree(alpha);
+    auto alphaResult = tester.test(alphaTree, testDS);
+
+    testsResults.score += alphaResult.score;
+    testsResults.savings += alphaResult.savings;
+    testsResults.size += alphaResult.size;
+
+    alphaSavings += alphaSavings.size() == 0 ? "" : ",";
+    alphaSavings += std::to_string(alphaResult.savings);
+
+    // Print tree to this alpha file
+    std::string alphaFileName = outputFolder_ + "outputTree_" + config->name
+                                + "_alpha" + std::to_string(alpha) + ".txt";
+    std::ofstream alphaFile;
+    alphaFile.open(alphaFileName, std::ofstream::app);
+    trainDS.printTree(alphaTree, alphaFileName);
+    alphaFile.close();
+    tester.saveResult(alphaResult, alphaFileName);
+  }
+
+  testsResults.score /= config->alphas.size();
+  testsResults.savings /= config->alphas.size();
+  testsResults.size /= config->alphas.size();
+
+  // Create output CSV file Folds x Alphas
+  std::string outputFileName = outputFolder_ + "outputTree_" + config->name + "_foldsXalphas.csv";
+  std::ofstream outputFile;
+  outputFile.open(outputFileName, std::ofstream::app);
+  outputFile << alphaSavings << std::endl;
+  outputFile.close();
+
+  return testsResults;
 }
