@@ -37,6 +37,7 @@ trees[1] = {
 trees[2] = {
 	name = "pairname",
 	treeType = "pair",
+  useScore = false,
   maxBound = 1,
   alphas = {},
   minLeaf = 50,

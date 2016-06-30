@@ -13,12 +13,13 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
   ErrorUtils::enforce(ds.getTotClasses() == 2, "Error! Number of classes must be 2.");
   
   std::shared_ptr<ConfigPairTree> config = std::static_pointer_cast<ConfigPairTree>(c);
-  return createTreeRec(ds, config->height, config->maxBound, config->minLeaf);
+  return createTreeRec(ds, config->height, config->maxBound, config->minLeaf, config->useScore);
 }
 
 
 std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height,
-                                                          double maxBound, int64_t minLeaf) {
+                                                          double maxBound,
+                                                          int64_t minLeaf, bool useScore) {
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
@@ -29,15 +30,17 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   int bestAttrib = -1;
   double bestBound = 1;
   int64_t bestSeparator = -1;
+  long double bestScore = 0;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    auto aux = testAttribute(ds, i, samplesInfo);
-    long double bound = aux.first;
-    int64_t separator = aux.second;
-    if (CompareUtils::compare(bound, maxBound) < 0
-        && CompareUtils::compare(bound, bestBound) < 0) {
+    auto attribResult = testAttribute(ds, i, samplesInfo);
+    // If bound satisfy maxBound then gets either greatest score or lowest bound
+    if (CompareUtils::compare(attribResult.bound, maxBound) < 0
+        && ((useScore && CompareUtils::compare(attribResult.score, bestScore) > 0)
+            || (!useScore && CompareUtils::compare(attribResult.bound, bestBound) < 0))) {
       bestAttrib = i;
-      bestBound = bound;
-      bestSeparator = separator;
+      bestBound = attribResult.bound;
+      bestSeparator = attribResult.separator;
+      bestScore = attribResult.score;
     }
   }
 
@@ -60,7 +63,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     node->setAlpha(bestBound);
     node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore), { j });
     }
     return node;
   // Numeric attribute
@@ -78,8 +81,8 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf));
-    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore));
+    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore));
     return node;
   }
 }
@@ -96,18 +99,26 @@ std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
 }
 
 
-std::pair<long double, int64_t> PairTree::testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+PairTree::AttribResult PairTree::testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
   if (ds.getAttributeType(attribInx) == AttributeType::INTEGER
       || ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
     AttribScoreResult orderedResults = getOrderedAttribScore(ds, attribInx, samplesInfo);
     long double orderedBound = getAttribBound(orderedResults, attribInx, samplesInfo);
 
-    return std::make_pair(orderedBound, orderedResults.separator);
+    AttribResult ans;
+    ans.bound = orderedBound;
+    ans.score = orderedResults.score;
+    ans.separator = orderedResults.separator;
+    return ans;
   } else {
     AttribScoreResult nominalResults = getNominalAttribScore(ds, attribInx, samplesInfo);
     long double nominalBound = getAttribBound(nominalResults, attribInx, samplesInfo);
 
-    return std::make_pair(nominalBound, -1);
+    AttribResult ans;
+    ans.bound = nominalBound;
+    ans.score = nominalResults.score;
+    ans.separator = nominalResults.separator;
+    return ans;
   }
 }
 

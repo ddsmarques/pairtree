@@ -8,6 +8,7 @@ class ConfigPairTree : public ConfigTree {
 public:
   double maxBound;
   int64_t minLeaf;
+  bool useScore;
   std::vector<long double> alphas;
 };
 
@@ -27,10 +28,16 @@ private:
     int64_t separator;
     std::vector<double> distrib;
   };
+  struct AttribResult {
+    long double score;
+    int64_t separator;
+    long double bound;
+  };
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int height,
-                                                  double maxBound, int64_t minLeaf);
+                                                  double maxBound,
+                                                  int64_t minLeaf, bool useScore);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
-  std::pair<long double, int64_t> testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
+  AttribResult testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
   AttribScoreResult getNominalAttribScore(DataSet& ds, int64_t attribInx,
                                           std::vector<PairTree::SampleInfo>& samplesInfo);
   AttribScoreResult getOrderedAttribScore(DataSet& ds, int64_t attribInx,
