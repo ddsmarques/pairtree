@@ -7,10 +7,16 @@ public:
 
   void setAlpha(long double alpha);
 
+  void setNumSamples(int64_t numSamples);
+
   long double getAlpha();
 
-  std::shared_ptr<DecisionTreeNode> getTree(long double targetAlpha);
+  long double getNumSamples();
+
+  std::shared_ptr<DecisionTreeNode> getTree(long double targetAlpha,
+                                            int64_t minSamples);
 
 private:
   long double alpha_;
+  int64_t numSamples_;
 };

@@ -61,6 +61,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 
     std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
     node->setAlpha(bestBound);
+    node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
       node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore), { j });
@@ -70,6 +71,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   } else {
     std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
     node->setAlpha(bestBound);
+    node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
     DataSet leftDS, rightDS;
     leftDS.initAllAttributes(ds);
@@ -91,7 +93,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
   auto best = ds.getBestClass();
 
-  std::shared_ptr<DecisionTreeNode> leaf = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::LEAF);
+  std::shared_ptr<PairTreeNode> leaf = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::LEAF);
   leaf->setName("LEAF " + std::to_string(best.first));
   leaf->setLeafValue(best.first);
 

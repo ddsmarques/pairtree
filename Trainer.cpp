@@ -66,32 +66,17 @@ void Trainer::train(std::string fileName) {
     double size = 0;
     int64_t totSeconds = 0;
     if (config->trainMode->type == ConfigTrainMode::trainType::RANDOM_SPLIT) {
-      for (int fold = 0; fold < config->trainMode->folds; fold++) {
-        getRandomSplit(trainDS, testDS, config->trainMode->ratio);
-        auto result = runTree(config, i, trainDS, testDS);
-        score += result.score;
-        savings += result.savings;
-        size += result.size;
-        totSeconds += result.seconds;
-      }
-      score = score / config->trainMode->folds;
-      savings = savings / config->trainMode->folds;
-      size = size / config->trainMode->folds;
+      auto runResult = execRandomSplit(config, trainDS, testDS, i);
+      score = runResult.score;
+      savings = runResult.savings;
+      size = runResult.size;
+      totSeconds += runResult.seconds;
     } else if (config->trainMode->type == ConfigTrainMode::trainType::SPLIT) {
-      for (int fold = 0; fold < config->trainMode->folds; fold++) {
-        DataSet currTrain, currTest;
-        currTrain.initAllAttributes(trainDS);
-        currTest.initAllAttributes(trainDS);
-        getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold);
-        auto result = runTree(config, i, currTrain, currTest);
-        score += result.score;
-        savings += result.savings;
-        size += result.size;
-        totSeconds += result.seconds;
-      }
-      score = score / config->trainMode->folds;
-      savings = savings / config->trainMode->folds;
-      size = size / config->trainMode->folds;
+      auto runResult = execSplit(config, trainDS, i);
+      score = runResult.score;
+      savings = runResult.savings;
+      size = runResult.size;
+      totSeconds += runResult.seconds;
     } else {
       auto result = runTree(config, i, trainDS, testDS);
       score = result.score;
@@ -112,6 +97,104 @@ void Trainer::train(std::string fileName) {
   }
 
   Logger::closeOutput();
+}
+
+
+Trainer::TreeResult Trainer::execRandomSplit(std::shared_ptr<ConfigTrain> config,
+                                             DataSet& trainDS, DataSet& testDS,
+                                             int treeInx) {
+  TreeResult runResult;
+  runResult.score = 0;
+  runResult.savings = 0;
+  runResult.size = 0;
+  runResult.seconds = 0;
+
+  for (int fold = 0; fold < config->trainMode->folds; fold++) {
+    getRandomSplit(trainDS, testDS, config->trainMode->ratio);
+    auto result = runTree(config, treeInx, trainDS, testDS);
+    runResult.score += result.score;
+    runResult.savings += result.savings;
+    runResult.size += result.size;
+    runResult.seconds += result.seconds;
+  }
+
+  return runResult;
+}
+
+
+Trainer::TreeResult Trainer::execSplit(std::shared_ptr<ConfigTrain> config,
+                                       DataSet& trainDS, int treeInx) {
+  TreeResult runResult;
+  runResult.score = 0;
+  runResult.savings = 0;
+  runResult.size = 0;
+  runResult.seconds = 0;
+
+  for (int fold = 0; fold < config->trainMode->folds; fold++) {
+    DataSet currTrain, currTest;
+    currTrain.initAllAttributes(trainDS);
+    currTest.initAllAttributes(trainDS);
+    getSplit(trainDS, currTrain, currTest, config->dataSetFile, fold);
+    auto foldResult = runTree(config, treeInx, currTrain, currTest);
+
+    if (foldResult.alphaXsamples.size() > 0) {
+      // Update sum of all alphaXsamples matrix
+      if (runResult.alphaXsamples.size() == 0) {
+        runResult.alphaXsamples = foldResult.alphaXsamples;
+      } else {
+        if (runResult.alphaXsamples.size() == foldResult.alphaXsamples.size()
+            && runResult.alphaXsamples[0].size() == foldResult.alphaXsamples[0].size()) {
+          for (int i = 0; i < foldResult.alphaXsamples.size(); i++) {
+            for (int j = 0; j < foldResult.alphaXsamples[i].size(); j++) {
+              runResult.alphaXsamples[i][j] += foldResult.alphaXsamples[i][j];
+            }
+          }
+        } else {
+          Logger::log() << "Error: Folds with different sizes of the alphaXsamples matrix.";
+        }
+      }
+
+      // Saves this fold alphaXsamples matrix
+      std::string foldFileName = outputFolder_ + "alphaXsamples_fold" + std::to_string(fold) + ".csv";
+      std::ofstream ofs(foldFileName, std::ofstream::out);
+      for (int i = 0; i < foldResult.alphaXsamples.size(); i++) {
+        for (int j = 0; j < foldResult.alphaXsamples[i].size(); j++) {
+          if (j != 0) ofs << ",";
+          ofs << foldResult.alphaXsamples[i][j];
+        }
+        ofs << std::endl;
+      }
+      ofs.close();
+    }
+
+    runResult.score += foldResult.score;
+    runResult.savings += foldResult.savings;
+    runResult.size += foldResult.size;
+    runResult.seconds += foldResult.seconds;
+  }
+
+  runResult.score /= config->trainMode->folds;
+  runResult.savings /= config->trainMode->folds;
+  runResult.size /= config->trainMode->folds;
+  for (int i = 0; i < runResult.alphaXsamples.size(); i++) {
+    for (int j = 0; j < runResult.alphaXsamples[i].size(); j++) {
+      runResult.alphaXsamples[i][j] /= config->trainMode->folds;
+    }
+  }
+
+  // Saves this fold alphaXsamples matrix
+  std::string allFoldsFileName = outputFolder_ + "alphaXsamples_AllFolds.csv";
+  std::ofstream ofs(allFoldsFileName, std::ofstream::out);
+  for (int i = 0; i < runResult.alphaXsamples.size(); i++) {
+    for (int j = 0; j < runResult.alphaXsamples[i].size(); j++) {
+      if (j != 0) ofs << ",";
+      ofs << runResult.alphaXsamples[i][j];
+    }
+    ofs << std::endl;
+  }
+  ofs.close();
+
+  return runResult;
 }
 
 
@@ -171,7 +254,7 @@ void Trainer::loadSplit(DataSet& originalDS, DataSet& current, std::string fileN
 
 
 Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
-                                                 DataSet& trainDS, DataSet& testDS) {
+                                     DataSet& trainDS, DataSet& testDS) {
   // Log starting test
   auto start = std::chrono::system_clock::now();
   Logger::log() << "Starting test " << config->configTrees[treeInx]->name;
@@ -184,16 +267,23 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
 
   // Run test
   Tester tester;
+  TreeResult treeResult;
   Tester::TestResults testResult;
   if (std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr) {
-    testResult = runPairTree(std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]),
+    treeResult = runPairTree(std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]),
                              std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx]),
                              trainDS, testDS);
+    testResult.savings = treeResult.savings;
+    testResult.score = treeResult.score;
+    testResult.size = treeResult.size;
   } else {
     std::shared_ptr<DecisionTreeNode> tree = config->trees[treeInx]->createTree(trainDS,
                                                 config->configTrees[treeInx]);
     trainDS.printTree(tree, outputFileName);
     testResult = tester.test(tree, testDS);
+    treeResult.savings = testResult.savings;
+    treeResult.score = testResult.score;
+    treeResult.size = testResult.size;
   }
   tester.saveResult(testResult, outputFileName);
 
@@ -202,58 +292,47 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   int64_t countSeconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
   Logger::log() << "Elapsed time in seconds " << countSeconds;
 
-  TreeResult treeResult;
-  treeResult.score = testResult.score;
-  treeResult.savings = testResult.savings;
-  treeResult.size = testResult.size;
   treeResult.seconds = countSeconds;
+
   return treeResult;
 }
 
 
-Tester::TestResults Trainer::runPairTree(std::shared_ptr<PairTree> pairTree,
+Trainer::TreeResult Trainer::runPairTree(std::shared_ptr<PairTree> pairTree,
                                          std::shared_ptr<ConfigPairTree> config,
                                          DataSet& trainDS, DataSet& testDS) {
-  Tester::TestResults testsResults;
-  testsResults.score = 0;
-  testsResults.savings = 0;
-  testsResults.size = 0;
-
+  TreeResult treeResult;
+  treeResult.score = 0;
+  treeResult.savings = 0;
+  treeResult.size = 0;
+  treeResult.alphaXsamples = std::vector<std::vector<long double>>(config->alphas.size(),
+                                                                   std::vector<long double>(config->minSamples.size()));
   Tester tester;
-  std::string alphaSavings = "";
   std::shared_ptr<PairTreeNode> fullTree = std::static_pointer_cast<PairTreeNode>(
                                               pairTree->createTree(trainDS, config));
-  for (auto& alpha : config->alphas) {
-    auto alphaTree = fullTree->getTree(alpha);
-    auto alphaResult = tester.test(alphaTree, testDS);
+  for (int i = 0; i < config->alphas.size(); i++) {
+    auto alpha = config->alphas[i];
+    for (int j = 0; j < config->minSamples.size(); j++) {
+      auto minSamples = config->minSamples[j];
+      auto alphaSampleTree = fullTree->getTree(alpha, minSamples);
+      auto alphaSampleResult = tester.test(alphaSampleTree, testDS);
 
-    testsResults.score += alphaResult.score;
-    testsResults.savings += alphaResult.savings;
-    testsResults.size += alphaResult.size;
+      treeResult.score += alphaSampleResult.score;
+      treeResult.savings += alphaSampleResult.savings;
+      treeResult.size += alphaSampleResult.size;
+      treeResult.alphaXsamples[i][j] = alphaSampleResult.savings;
 
-    alphaSavings += alphaSavings.size() == 0 ? "" : ",";
-    alphaSavings += std::to_string(alphaResult.savings);
-
-    // Print tree to this alpha file
-    std::string alphaFileName = outputFolder_ + "outputTree_" + config->name
-                                + "_alpha" + std::to_string(alpha) + ".txt";
-    std::ofstream alphaFile;
-    alphaFile.open(alphaFileName, std::ofstream::app);
-    trainDS.printTree(alphaTree, alphaFileName);
-    alphaFile.close();
-    tester.saveResult(alphaResult, alphaFileName);
+      // Print tree to this alpha X samples file
+      std::string alphaSampleFileName = outputFolder_ + "outputTree_" + config->name
+        + "_alphaXsample_" + std::to_string(alpha) + "X" + std::to_string(minSamples) + ".txt";
+      trainDS.printTree(alphaSampleTree, alphaSampleFileName);
+      tester.saveResult(alphaSampleResult, alphaSampleFileName);
+    }
   }
 
-  testsResults.score /= config->alphas.size();
-  testsResults.savings /= config->alphas.size();
-  testsResults.size /= config->alphas.size();
+  treeResult.score /= config->alphas.size() * config->minSamples.size();
+  treeResult.savings /= config->alphas.size() * config->minSamples.size();
+  treeResult.size /= config->alphas.size() * config->minSamples.size();
 
-  // Create output CSV file Folds x Alphas
-  std::string outputFileName = outputFolder_ + "outputTree_" + config->name + "_foldsXalphas.csv";
-  std::ofstream outputFile;
-  outputFile.open(outputFileName, std::ofstream::app);
-  outputFile << alphaSavings << std::endl;
-  outputFile.close();
-
-  return testsResults;
+  return treeResult;
 }

@@ -40,11 +40,15 @@ trees[2] = {
   useScore = false,
   maxBound = 1,
   alphas = {},
+  minSamples = {},
   minLeaf = 50,
 	height = 10
 }
 i = 0
 for alpha=0.1,1,0.05 do
-  trees[0].alphas[i] = alpha
+  trees[2].alphas[i] = alpha
   i = i + 1
 end
+trees[2].minSamples[0] = 30
+trees[2].minSamples[1] = 50
+trees[2].minSamples[2] = 100

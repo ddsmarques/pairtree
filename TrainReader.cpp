@@ -122,8 +122,14 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       pairConfig->maxBound = getVar<double>(tree, "maxBound");
       pairConfig->minLeaf = getVar<int>(tree, "minLeaf");
       pairConfig->useScore = getVar<bool>(tree, "useScore");
-      luabridge::LuaRef alphas = tree["alphas"];
+      luabridge::LuaRef minSamples = tree["minSamples"];
       int i = 0;
+      while (!minSamples[i].isNil()) {
+        pairConfig->minSamples.push_back(getVar<int>(minSamples, i));
+        i++;
+      }
+      luabridge::LuaRef alphas = tree["alphas"];
+      i = 0;
       while (!alphas[i].isNil()) {
         pairConfig->alphas.push_back(getVar<double>(alphas, i));
         i++;

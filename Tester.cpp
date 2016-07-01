@@ -38,4 +38,5 @@ void Tester::saveResult(TestResults result, std::string outputFileName) {
   ofs << "Size "
     << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
     << result.size << std::endl;
+  ofs.close();
 }

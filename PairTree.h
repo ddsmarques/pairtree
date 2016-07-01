@@ -10,6 +10,7 @@ public:
   int64_t minLeaf;
   bool useScore;
   std::vector<long double> alphas;
+  std::vector<int64_t> minSamples;
 };
 
 class PairTree : public Tree {
