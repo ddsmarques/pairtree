@@ -2,6 +2,7 @@
 
 #include "CompareUtils.h"
 #include "ErrorUtils.h"
+#include "Logger.h"
 
 #include <string>
 
@@ -12,12 +13,11 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTree(DataSet& ds, std::share
   std::shared_ptr<ConfigGreedy> config = std::static_pointer_cast<ConfigGreedy>(c);
   std::vector<bool> availableAttrib(ds.getTotAttributes(), true);
   return createTreeRec(ds, config->height, config->minLeaf, config->percentiles,
-                       availableAttrib);
+                       config->minGain);
 }
 
 std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t height, int64_t minLeaf,
-                                                            int64_t percentiles,
-                                                            std::vector<bool> availableAttrib) {
+                                                            int64_t percentiles, double minGain) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
@@ -28,22 +28,19 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
   long double bestScore = 0;
   int64_t bestSeparator = -1;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    if (availableAttrib[i]) {
-      auto attrib = getAttribScore(ds, i, percentiles);
-      long double score = attrib.first;
-      int64_t separator = attrib.second;
-      if (bestAttrib == -1
-          || CompareUtils::compare(score, bestScore) > 0) {
-        bestAttrib = i;
-        bestScore = score;
-        bestSeparator = separator;
-      }
+    auto attrib = getAttribScore(ds, i, percentiles);
+    long double score = attrib.first;
+    int64_t separator = attrib.second;
+    if (bestAttrib == -1
+        || CompareUtils::compare(score, bestScore) > 0) {
+      bestAttrib = i;
+      bestScore = score;
+      bestSeparator = separator;
     }
   }
-  if (bestAttrib == -1) {
+  if (bestAttrib == -1 || !minimumGain(ds, bestScore, minGain)) {
     return createLeaf(ds);
   }
-  availableAttrib[bestAttrib] = false;
 
   if (bestSeparator == -1) {
     int64_t bestAttribSize = ds.getAttributeSize(bestAttrib);
@@ -58,7 +55,7 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
     std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
       bestAttrib);
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, percentiles, availableAttrib), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, percentiles, minGain), { j });
     }
     return node;
   } else {
@@ -74,8 +71,8 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, percentiles, availableAttrib));
-    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, percentiles, availableAttrib));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, percentiles, minGain));
+    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, percentiles, minGain));
     return node;
   }
 }
@@ -159,4 +156,13 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createLeaf(DataSet& ds) {
   leaf->setLeafValue(best.first);
 
   return leaf;
+}
+
+
+bool GreedyTree::minimumGain(DataSet& ds, long double score, long double minGain) {
+  auto bestClass = ds.getBestClass();
+  if (CompareUtils::compare(bestClass.second, 0) == 0) return false;
+
+  long double gain = (score - bestClass.second) / -bestClass.second;
+  return CompareUtils::compare(gain, minGain) >= 0;
 }

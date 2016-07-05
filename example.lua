@@ -32,6 +32,9 @@ trees[0] = {
 trees[1] = {
 	name = "greedyname",
 	treeType = "greedy",
+  percentiles = 100,
+  minLeaf = 30,
+  minGain = 0.01,
 	height = 2
 }
 trees[2] = {

@@ -10,6 +10,7 @@ class ConfigGreedy : public ConfigTree {
 public:
   int64_t minLeaf;
   int64_t percentiles;
+  double minGain;
 };
 
 class GreedyTree : public Tree {
@@ -20,11 +21,12 @@ public:
 private:
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height,
                                                   int64_t minLeaf, int64_t percentiles,
-                                                  std::vector<bool> availableAttrib);
+                                                  double minGain);
   std::pair<long double, int64_t> getAttribScore(DataSet& ds, int64_t attribInx,
                                                  int64_t percentiles);
   long double getNominalScore(DataSet& ds, int64_t attribInx);
   std::pair<long double, int64_t> getOrderedScore(DataSet& ds, int64_t attribInx,
                                                   int64_t percentiles);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
+  bool minimumGain(DataSet& ds, long double score, long double minGain);
 };

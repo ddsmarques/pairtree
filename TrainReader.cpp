@@ -89,6 +89,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       gtConfig->name = getVar<std::string>(tree, "name");
       gtConfig->minLeaf = getVar<int>(tree, "minLeaf");
       gtConfig->percentiles = getVar<int>(tree, "percentiles");
+      gtConfig->minGain = getVar<double>(tree, "minGain");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
 
       std::shared_ptr<GreedyTree> greedy = std::make_shared<GreedyTree>();
