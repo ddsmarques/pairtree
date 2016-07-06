@@ -48,8 +48,7 @@ private:
   std::pair<long double, long double> getRandomScore(std::vector<PairTree::SampleInfo>& samplesInfo,
                                                      std::vector<double>& distrib);
   long double getProbBound(int64_t attribInx, int64_t attribSize,
-                          std::vector<PairTree::SampleInfo>& samplesInfo, long double value,
-                          int64_t separator);
+                          std::vector<PairTree::SampleInfo>& samplesInfo, long double value);
   int64_t getBinBox(int64_t attribValue, int64_t separator);
   void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
 };

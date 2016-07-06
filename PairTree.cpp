@@ -266,8 +266,7 @@ long double PairTree::getAttribBound(AttribScoreResult& attribResult, int64_t at
   long double expected = aux.first;
   if (CompareUtils::compare(attribResult.score, expected, 1e-7) > 0) {
     return getProbBound(attribInx, attribResult.distrib.size(),
-                        samplesInfo, attribResult.score - expected,
-                        attribResult.separator);
+                        samplesInfo, attribResult.score - expected);
   }
   return 1;
 }
@@ -313,23 +312,19 @@ std::pair<long double, long double> PairTree::getRandomScore(std::vector<PairTre
 
 long double PairTree::getProbBound(int64_t attribInx, int64_t attribSize,
                                    std::vector<PairTree::SampleInfo>& samplesInfo,
-                                   long double value, int64_t separator) {
+                                   long double value) {
   std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
-  // totalValueClass[j][c] = number of samples valued 'j' at 'attribInx' whose class is 'c'
-  std::vector<std::vector<int64_t>> totalValueClass(attribSize, std::vector<int64_t>(2, 0));
 
   for (auto s : samplesInfo) {
     totalClass[s.bestClass]++;
-    totalValueClass[getBinBox(s.ptr->inxValue_[attribInx], separator)][s.bestClass]++;
   }
   long double xstar = std::max(totalClass[0], totalClass[1]);
 
   long double sumSqBounds = 0;
   for (auto s : samplesInfo) {
     int notBestClass = (s.bestClass + 1) % 2;
-    sumSqBounds += (s.diff * s.diff) * (totalClass[notBestClass] - totalValueClass[getBinBox(s.ptr->inxValue_[attribInx], separator)][notBestClass]);
+    sumSqBounds += (s.diff * s.diff) * totalClass[notBestClass];
     totalClass[s.bestClass]--;
-    totalValueClass[getBinBox(s.ptr->inxValue_[attribInx], separator)][s.bestClass]--;
   }
 
   // Tries to avoid division by 0
