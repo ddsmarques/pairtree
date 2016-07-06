@@ -164,6 +164,15 @@ PairTree::AttribScoreResult PairTree::getNominalAttribScore(DataSet& ds, int64_t
 
 
 PairTree::AttribScoreResult PairTree::getOrderedAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+  // Calculate the sum on formula E[Gain(A)] = 2*p(1-p) * \sum_{i=1...N}{D(s_i) * TC^i_{notC}}
+  // The following variables will be used later to calculate the bound for a splitting parameter
+  auto randomScore = getRandomScore(samplesInfo, std::vector<double>{ 0.5, 0.5 });
+  long double randomSum = 2 * randomScore.first;
+  auto auxBound = calcXstarSumsq(attribInx, samplesInfo);
+  long double xstar = auxBound.first;
+  long double sumSq = auxBound.second;
+
+  long double bestBound = 1;
   long double bestScore = 0;
   int64_t bestLeftSize = 0;
   int64_t bestSeparator = 0;
@@ -243,14 +252,17 @@ PairTree::AttribScoreResult PairTree::getOrderedAttribScore(DataSet& ds, int64_t
     countRight[bestClass].update(posDiff + 1, -1);
 
     if (i == totSamples - 1 || (ordSamples[i].attribValue != ordSamples[i + 1].attribValue)) {
-      if (CompareUtils::compare(score, bestScore) > 0) {
+      long double p = (i + 1) / ((long double)totSamples);
+      long double expected = 2 * p * (1 - p) * randomSum;
+      long double bound = applyBound(score - expected, xstar, sumSq);
+      if (CompareUtils::compare(bound, bestBound) < 0) {
         bestSeparator = ordSamples[i].attribValue;
+        bestBound = bound;
         bestScore = score;
         bestLeftSize = i + 1;
       }
     }
   }
-
   std::vector<double> distrib {bestLeftSize / (double)totSamples, (totSamples - bestLeftSize)/(double)totSamples};
   AttribScoreResult ans;
   ans.score = bestScore;
@@ -265,8 +277,7 @@ long double PairTree::getAttribBound(AttribScoreResult& attribResult, int64_t at
   auto aux = getRandomScore(samplesInfo, attribResult.distrib);
   long double expected = aux.first;
   if (CompareUtils::compare(attribResult.score, expected, 1e-7) > 0) {
-    return getProbBound(attribInx, attribResult.distrib.size(),
-                        samplesInfo, attribResult.score - expected);
+    return getProbBound(attribInx, samplesInfo, attribResult.score - expected);
   }
   return 1;
 }
@@ -310,9 +321,16 @@ std::pair<long double, long double> PairTree::getRandomScore(std::vector<PairTre
 }
 
 
-long double PairTree::getProbBound(int64_t attribInx, int64_t attribSize,
+long double PairTree::getProbBound(int64_t attribInx,
                                    std::vector<PairTree::SampleInfo>& samplesInfo,
-                                   long double value) {
+                                   long double t) {
+  auto vars = calcXstarSumsq(attribInx, samplesInfo);
+  return applyBound(t, vars.first, vars.second);
+}
+
+
+std::pair<long double, long double> PairTree::calcXstarSumsq(int64_t attribInx,
+                                                             std::vector<PairTree::SampleInfo>& samplesInfo) {
   std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
 
   for (auto s : samplesInfo) {
@@ -327,11 +345,16 @@ long double PairTree::getProbBound(int64_t attribInx, int64_t attribSize,
     totalClass[s.bestClass]--;
   }
 
+  return std::pair<long double, long double>(xstar, sumSqBounds);
+}
+
+
+long double PairTree::applyBound(long double t, long double xstar, long double sumSqBounds) {
   // Tries to avoid division by 0
-  if (CompareUtils::compare(xstar * sumSqBounds, 0) == 0) {
+  if (CompareUtils::compare(t, 0) <= 0 || CompareUtils::compare(xstar * sumSqBounds, 0) == 0) {
     return 1;
   }
-  return std::exp((-2.0 * value * value) / (xstar * sumSqBounds));
+  return std::exp((-2.0 * t * t) / (xstar * sumSqBounds));
 }
 
 

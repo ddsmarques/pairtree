@@ -47,8 +47,11 @@ private:
                              std::vector<PairTree::SampleInfo>& samplesInfo);
   std::pair<long double, long double> getRandomScore(std::vector<PairTree::SampleInfo>& samplesInfo,
                                                      std::vector<double>& distrib);
-  long double getProbBound(int64_t attribInx, int64_t attribSize,
-                          std::vector<PairTree::SampleInfo>& samplesInfo, long double value);
+  long double getProbBound(int64_t attribInx,
+                           std::vector<PairTree::SampleInfo>& samplesInfo, long double t);
+  std::pair<long double, long double> calcXstarSumsq(int64_t attribInx,
+                                                     std::vector<PairTree::SampleInfo>& samplesInfo);
+  long double applyBound(long double t, long double xstar, long double sumSqBounds);
   int64_t getBinBox(int64_t attribValue, int64_t separator);
   void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
 };
