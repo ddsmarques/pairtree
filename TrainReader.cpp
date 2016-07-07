@@ -90,6 +90,18 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       gtConfig->minLeaf = getVar<int>(tree, "minLeaf");
       gtConfig->percentiles = getVar<int>(tree, "percentiles");
       gtConfig->minGain = getVar<double>(tree, "minGain");
+      luabridge::LuaRef minSamples = tree["minSamples"];
+      int i = 0;
+      while (!minSamples[i].isNil()) {
+        gtConfig->minSamples.push_back(getVar<int>(minSamples, i));
+        i++;
+      }
+      luabridge::LuaRef alphas = tree["alphas"];
+      i = 0;
+      while (!alphas[i].isNil()) {
+        gtConfig->alphas.push_back(getVar<double>(alphas, i));
+        i++;
+      }
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
 
       std::shared_ptr<GreedyTree> greedy = std::make_shared<GreedyTree>();

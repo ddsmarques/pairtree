@@ -3,6 +3,7 @@
 #include "CompareUtils.h"
 #include "ErrorUtils.h"
 #include "Logger.h"
+#include "ExtrasTreeNode.h"
 
 #include <string>
 
@@ -38,7 +39,8 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
       bestSeparator = separator;
     }
   }
-  if (bestAttrib == -1 || !minimumGain(ds, bestScore, minGain)) {
+  long double bestGain = calcGain(ds, bestScore);
+  if (bestAttrib == -1 || CompareUtils::compare(bestGain, minGain) < 0) {
     return createLeaf(ds);
   }
 
@@ -52,14 +54,20 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
       allDS[s->inxValue_[bestAttrib]].addSample(s);
     }
 
-    std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
-      bestAttrib);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
+                                                                        bestAttrib);
+    node->setAlpha(1 - bestGain);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
       node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, percentiles, minGain), { j });
     }
     return node;
   } else {
-    std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
+    node->setAlpha(1 - bestGain);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
     DataSet leftDS, rightDS;
     leftDS.initAllAttributes(ds);
     rightDS.initAllAttributes(ds);
@@ -159,10 +167,9 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createLeaf(DataSet& ds) {
 }
 
 
-bool GreedyTree::minimumGain(DataSet& ds, long double score, long double minGain) {
+long double GreedyTree::calcGain(DataSet& ds, long double score) {
   auto bestClass = ds.getBestClass();
-  if (CompareUtils::compare(bestClass.second, 0) == 0) return false;
+  if (CompareUtils::compare(bestClass.second, 0) == 0) return 0;
 
-  long double gain = (score - bestClass.second) / -bestClass.second;
-  return CompareUtils::compare(gain, minGain) >= 0;
+  return (score - bestClass.second) / -bestClass.second;
 }

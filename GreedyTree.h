@@ -11,6 +11,8 @@ public:
   int64_t minLeaf;
   int64_t percentiles;
   double minGain;
+  std::vector<long double> alphas;
+  std::vector<int64_t> minSamples;
 };
 
 class GreedyTree : public Tree {
@@ -28,5 +30,5 @@ private:
   std::pair<long double, int64_t> getOrderedScore(DataSet& ds, int64_t attribInx,
                                                   int64_t percentiles);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
-  bool minimumGain(DataSet& ds, long double score, long double minGain);
+  long double calcGain(DataSet& ds, long double score);
 };

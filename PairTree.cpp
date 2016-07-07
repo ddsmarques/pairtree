@@ -4,7 +4,7 @@
 #include "BIT.h"
 #include "CompareUtils.h"
 #include "Logger.h"
-#include "PairTreeNode.h"
+#include "ExtrasTreeNode.h"
 
 #include <cmath>
 
@@ -61,7 +61,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
       allDS[s->inxValue_[bestAttrib]].addSample(s);
     }
 
-    std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
     node->setAlpha(bestBound);
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
@@ -72,7 +72,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 
   // Nominal attribute separating one value from the rest
   } else if (bestSeparator != -1 && ds.getAttributeType(bestAttrib) == AttributeType::STRING) {
-    std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
     node->setAlpha(bestBound);
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
@@ -99,7 +99,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 
   // Numeric Attribute
   } else {
-    std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
     node->setAlpha(bestBound);
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
@@ -123,7 +123,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
 std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
   auto best = ds.getBestClass();
 
-  std::shared_ptr<PairTreeNode> leaf = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::LEAF);
+  std::shared_ptr<ExtrasTreeNode> leaf = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::LEAF);
   leaf->setName("LEAF " + std::to_string(best.first));
   leaf->setLeafValue(best.first);
 

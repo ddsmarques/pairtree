@@ -1,9 +1,9 @@
 #pragma once
 #include "DecisionTreeNode.h"
 
-class PairTreeNode : public DecisionTreeNode {
+class ExtrasTreeNode : public DecisionTreeNode {
 public:
-  PairTreeNode(NodeType type, int64_t attribCol = -1, int64_t splitValue = -1);
+  ExtrasTreeNode(NodeType type, int64_t attribCol = -1, int64_t splitValue = -1);
 
   void setAlpha(long double alpha);
 

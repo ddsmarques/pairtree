@@ -30,9 +30,8 @@ private:
   void loadSplit(DataSet& originalDS, DataSet& current, std::string fileName);
   TreeResult runTree(std::shared_ptr<ConfigTrain>& config, int treeInx,
                      DataSet& trainDS, DataSet& testDS);
-  TreeResult runPairTree(std::shared_ptr<PairTree> pairTree,
-                         std::shared_ptr<ConfigPairTree> config,
-                         DataSet& trainDS, DataSet& testDS);
+  TreeResult runAlphaSamplesTrees(std::shared_ptr<ConfigTrain>& config, int treeInx,
+                               DataSet& trainDS, DataSet& testDS);
 
   std::string outputFolder_;
 };

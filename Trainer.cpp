@@ -3,9 +3,10 @@
 #include "CompareUtils.h"
 #include "DataSet.h"
 #include "DataSetBuilder.h"
+#include "GreedyTree.h"
 #include "Logger.h"
 #include "PairTree.h"
-#include "PairTreeNode.h"
+#include "ExtrasTreeNode.h"
 #include "Tester.h"
 
 #include <chrono>
@@ -269,10 +270,9 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   Tester tester;
   TreeResult treeResult;
   Tester::TestResults testResult;
-  if (std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr) {
-    treeResult = runPairTree(std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]),
-                             std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx]),
-                             trainDS, testDS);
+  if (std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr
+      || std::dynamic_pointer_cast<GreedyTree>(config->trees[treeInx]) != nullptr) {
+    treeResult = runAlphaSamplesTrees(config, treeInx, trainDS, testDS);
     testResult.savings = treeResult.savings;
     testResult.score = treeResult.score;
     testResult.size = treeResult.size;
@@ -298,23 +298,41 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
 }
 
 
-Trainer::TreeResult Trainer::runPairTree(std::shared_ptr<PairTree> pairTree,
-                                         std::shared_ptr<ConfigPairTree> config,
-                                         DataSet& trainDS, DataSet& testDS) {
+Trainer::TreeResult Trainer::runAlphaSamplesTrees(std::shared_ptr<ConfigTrain>& config,
+                                                  int treeInx,
+                                                  DataSet& trainDS, DataSet& testDS) {
+  std::vector<long double> alphas;
+  std::vector<int64_t> minSamples;
+
+  if (std::static_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr) {
+    alphas = std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx])->alphas;
+    minSamples = std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx])->minSamples;
+  } else if (std::static_pointer_cast<GreedyTree>(config->trees[treeInx]) != nullptr) {
+    alphas = std::static_pointer_cast<ConfigGreedy>(config->configTrees[treeInx])->alphas;
+    minSamples = std::static_pointer_cast<ConfigGreedy>(config->configTrees[treeInx])->minSamples;
+  } else {
+    Logger::log() << "Error training trees using multiple alphas and samples.";
+    TreeResult ans;
+    ans.score = -1;
+    ans.savings = -1;
+    ans.size = -1;
+    return ans;
+  }
+
   TreeResult treeResult;
   treeResult.score = 0;
   treeResult.savings = 0;
   treeResult.size = 0;
-  treeResult.alphaXsamples = std::vector<std::vector<long double>>(config->alphas.size(),
-                                                                   std::vector<long double>(config->minSamples.size()));
+  treeResult.alphaXsamples = std::vector<std::vector<long double>>(alphas.size(),
+                                                                   std::vector<long double>(minSamples.size()));
   Tester tester;
-  std::shared_ptr<PairTreeNode> fullTree = std::static_pointer_cast<PairTreeNode>(
-                                              pairTree->createTree(trainDS, config));
-  for (int i = 0; i < config->alphas.size(); i++) {
-    auto alpha = config->alphas[i];
-    for (int j = 0; j < config->minSamples.size(); j++) {
-      auto minSamples = config->minSamples[j];
-      auto alphaSampleTree = fullTree->getTree(alpha, minSamples);
+  std::shared_ptr<ExtrasTreeNode> fullTree = std::static_pointer_cast<ExtrasTreeNode>(
+                                              config->trees[treeInx]->createTree(trainDS, config->configTrees[treeInx]));
+  for (int i = 0; i < alphas.size(); i++) {
+    auto alpha = alphas[i];
+    for (int j = 0; j < minSamples.size(); j++) {
+      auto samples = minSamples[j];
+      auto alphaSampleTree = fullTree->getTree(alpha, samples);
       auto alphaSampleResult = tester.test(alphaSampleTree, testDS);
 
       treeResult.score += alphaSampleResult.score;
@@ -324,15 +342,15 @@ Trainer::TreeResult Trainer::runPairTree(std::shared_ptr<PairTree> pairTree,
 
       // Print tree to this alpha X samples file
       std::string alphaSampleFileName = outputFolder_ + "outputTree_" + config->name
-        + "_alphaXsample_" + std::to_string(alpha) + "X" + std::to_string(minSamples) + ".txt";
+        + "_alphaXsample_" + std::to_string(alpha) + "X" + std::to_string(samples) + ".txt";
       trainDS.printTree(alphaSampleTree, alphaSampleFileName);
       tester.saveResult(alphaSampleResult, alphaSampleFileName);
     }
   }
 
-  treeResult.score /= config->alphas.size() * config->minSamples.size();
-  treeResult.savings /= config->alphas.size() * config->minSamples.size();
-  treeResult.size /= config->alphas.size() * config->minSamples.size();
+  treeResult.score /= alphas.size() * minSamples.size();
+  treeResult.savings /= alphas.size() * minSamples.size();
+  treeResult.size /= alphas.size() * minSamples.size();
 
   return treeResult;
 }
