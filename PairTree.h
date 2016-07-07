@@ -1,6 +1,7 @@
 #pragma once
 #include "Tree.h"
 
+#include <functional>
 #include <vector>
 
 
@@ -9,6 +10,7 @@ public:
   double maxBound;
   int64_t minLeaf;
   bool useScore;
+  bool useNominalBinary;
   std::vector<long double> alphas;
   std::vector<int64_t> minSamples;
 };
@@ -36,13 +38,25 @@ private:
   };
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int height,
                                                   double maxBound,
-                                                  int64_t minLeaf, bool useScore);
+                                                  int64_t minLeaf, bool useScore,
+                                                  bool useNominalBinary);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
-  AttribResult testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
-  AttribScoreResult getNominalAttribScore(DataSet& ds, int64_t attribInx,
-                                          std::vector<PairTree::SampleInfo>& samplesInfo);
-  AttribScoreResult getOrderedAttribScore(DataSet& ds, int64_t attribInx,
-                                          std::vector<PairTree::SampleInfo>& samplesInfo);
+  void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
+
+  AttribResult testAttribute(DataSet& ds, int64_t attribInx,
+                             std::vector<PairTree::SampleInfo>& samplesInfo,
+                             bool useNominalBinary);
+  AttribResult testNumeric(DataSet& ds, int64_t attribInx,
+                           std::vector<PairTree::SampleInfo>& samplesInfo);
+  AttribResult testNominal(DataSet& ds, int64_t attribInx,
+                           std::vector<PairTree::SampleInfo>& samplesInfo,
+                           bool useNominalBinary);
+
+  AttribScoreResult calcNominalScore(DataSet& ds, int64_t attribInx,
+                                     std::function<int64_t(int64_t)> valueBox,
+                                     int64_t attribSize,
+                                     std::vector<PairTree::SampleInfo>& samplesInfo);
+
   long double getAttribBound(AttribScoreResult& attribResult, int64_t attribInx,
                              std::vector<PairTree::SampleInfo>& samplesInfo);
   std::pair<long double, long double> getRandomScore(std::vector<PairTree::SampleInfo>& samplesInfo,
@@ -52,6 +66,5 @@ private:
   std::pair<long double, long double> calcXstarSumsq(int64_t attribInx,
                                                      std::vector<PairTree::SampleInfo>& samplesInfo);
   long double applyBound(long double t, long double xstar, long double sumSqBounds);
-  int64_t getBinBox(int64_t attribValue, int64_t separator);
-  void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
+  
 };

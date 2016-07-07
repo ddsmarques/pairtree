@@ -41,6 +41,7 @@ trees[2] = {
 	name = "pairname",
 	treeType = "pair",
   useScore = false,
+  useNominalBinary = false,
   maxBound = 1,
   alphas = {},
   minSamples = {},

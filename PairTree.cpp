@@ -13,13 +13,15 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
   ErrorUtils::enforce(ds.getTotClasses() == 2, "Error! Number of classes must be 2.");
   
   std::shared_ptr<ConfigPairTree> config = std::static_pointer_cast<ConfigPairTree>(c);
-  return createTreeRec(ds, config->height, config->maxBound, config->minLeaf, config->useScore);
+  return createTreeRec(ds, config->height, config->maxBound, config->minLeaf,
+                       config->useScore, config->useNominalBinary);
 }
 
 
 std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height,
                                                           double maxBound,
-                                                          int64_t minLeaf, bool useScore) {
+                                                          int64_t minLeaf, bool useScore,
+                                                          bool useNominalBinary) {
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
@@ -32,7 +34,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   int64_t bestSeparator = -1;
   long double bestScore = 0;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    auto attribResult = testAttribute(ds, i, samplesInfo);
+    auto attribResult = testAttribute(ds, i, samplesInfo, useNominalBinary);
     // If bound satisfy maxBound then gets either greatest score or lowest bound
     if (CompareUtils::compare(attribResult.bound, maxBound) < 0
         && ((useScore && CompareUtils::compare(attribResult.score, bestScore) > 0)
@@ -48,7 +50,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     return createLeaf(ds);
   }
 
-  // Nominal attribute
+  // Nominal k-valued attribute creating k children
   if (bestSeparator == -1) {
     int64_t bestAttribSize = ds.getAttributeSize(bestAttrib);
     std::vector<DataSet> allDS(bestAttribSize);
@@ -64,10 +66,38 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore, useNominalBinary), { j });
     }
     return node;
-  // Numeric attribute
+
+  // Nominal attribute separating one value from the rest
+  } else if (bestSeparator != -1 && ds.getAttributeType(bestAttrib) == AttributeType::STRING) {
+    std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    node->setAlpha(bestBound);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
+
+    DataSet leftDS, rightDS;
+    leftDS.initAllAttributes(ds);
+    rightDS.initAllAttributes(ds);
+    for (const auto& s : ds.samples_) {
+      if (s->inxValue_[bestAttrib] == bestSeparator) {
+        leftDS.addSample(s);
+      } else {
+        rightDS.addSample(s);
+      }
+    }
+    
+    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary), { bestSeparator });
+    std::vector<int64_t> rightInxs;
+    for (int64_t i = 0; i < ds.getAttributeSize(bestAttrib); i++) {
+      if (i != bestSeparator) rightInxs.push_back(i);
+    }
+    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary), rightInxs);
+
+    return node;
+
+  // Numeric Attribute
   } else {
     std::shared_ptr<PairTreeNode> node = std::make_shared<PairTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
     node->setAlpha(bestBound);
@@ -83,8 +113,8 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore));
-    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary));
+    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary));
     return node;
   }
 }
@@ -101,36 +131,58 @@ std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
 }
 
 
-PairTree::AttribResult PairTree::testAttribute(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+PairTree::AttribResult PairTree::testAttribute(DataSet& ds, int64_t attribInx,
+                                               std::vector<PairTree::SampleInfo>& samplesInfo,
+                                               bool useNominalBinary) {
   if (ds.getAttributeType(attribInx) == AttributeType::INTEGER
       || ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
-    AttribScoreResult orderedResults = getOrderedAttribScore(ds, attribInx, samplesInfo);
-    long double orderedBound = getAttribBound(orderedResults, attribInx, samplesInfo);
-
-    AttribResult ans;
-    ans.bound = orderedBound;
-    ans.score = orderedResults.score;
-    ans.separator = orderedResults.separator;
-    return ans;
+    return testNumeric(ds, attribInx, samplesInfo);
   } else {
-    AttribScoreResult nominalResults = getNominalAttribScore(ds, attribInx, samplesInfo);
-    long double nominalBound = getAttribBound(nominalResults, attribInx, samplesInfo);
-
-    AttribResult ans;
-    ans.bound = nominalBound;
-    ans.score = nominalResults.score;
-    ans.separator = nominalResults.separator;
-    return ans;
+    return testNominal(ds, attribInx, samplesInfo, useNominalBinary);
   }
 }
 
 
-PairTree::AttribScoreResult PairTree::getNominalAttribScore(DataSet& ds, int64_t attribInx,
-                                                                            std::vector<PairTree::SampleInfo>& samplesInfo) {
+PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
+                                             std::vector<PairTree::SampleInfo>& samplesInfo,
+                                             bool useNominalBinary) {
+  AttribResult best;
+  best.bound = 1;
+
   int64_t attribSize = ds.getAttributeSize(attribInx);
+  // If wants to use binary splits then should test from -1 to attribSize.
+  // Else only needs to test boxZero = -1
+  int64_t maxSplits = useNominalBinary ? attribSize : 0;
+  for (int64_t i = -1; i < maxSplits; i++) {
+    int64_t boxZero = i;
+    std::function<int64_t(int64_t)> valueBox = [boxZero](int64_t inxValue) {
+      if (boxZero < 0) {
+        return inxValue;
+      }
+      return inxValue == boxZero ? 0ll : 1ll;
+    };
+
+    auto scoreResult = calcNominalScore(ds, attribInx, valueBox, boxZero == -1 ? attribSize : 2, samplesInfo);
+    long double bound = getAttribBound(scoreResult, attribInx, samplesInfo);
+
+    if (CompareUtils::compare(bound, best.bound) < 0) {
+      best.bound = bound;
+      best.score = scoreResult.score;
+      best.separator = boxZero;
+    }
+  }
+
+  return best;
+}
+
+
+PairTree::AttribScoreResult PairTree::calcNominalScore(DataSet& ds, int64_t attribInx,
+                                                       std::function<int64_t(int64_t)> valueBox,
+                                                       int64_t attribSize,
+                                                       std::vector<PairTree::SampleInfo>& samplesInfo) {
   std::vector<double> distrib(attribSize);
   for (int64_t i = 0; i < samplesInfo.size(); i++) {
-    distrib[samplesInfo[i].ptr->inxValue_[attribInx]]++;
+    distrib[valueBox(samplesInfo[i].ptr->inxValue_[attribInx])]++;
   }
   for (int64_t j = 0; j < attribSize; j++) {
     distrib[j] = distrib[j] / samplesInfo.size();
@@ -143,16 +195,16 @@ PairTree::AttribScoreResult PairTree::getNominalAttribScore(DataSet& ds, int64_t
 
   for (auto s : samplesInfo) {
     totalClass[s.bestClass]++;
-    totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]++;
+    totalValueClass[valueBox(s.ptr->inxValue_[attribInx])][s.bestClass]++;
   }
   int64_t totPairs = totalClass[0] * totalClass[1];
 
   long double score = 0;
   for (auto s : samplesInfo) {
     int notBestClass = (s.bestClass + 1) % 2;
-    score += s.diff * (totalClass[notBestClass] - totalValueClass[s.ptr->inxValue_[attribInx]][notBestClass]);
+    score += s.diff * (totalClass[notBestClass] - totalValueClass[valueBox(s.ptr->inxValue_[attribInx])][notBestClass]);
     totalClass[s.bestClass]--;
-    totalValueClass[s.ptr->inxValue_[attribInx]][s.bestClass]--;
+    totalValueClass[valueBox(s.ptr->inxValue_[attribInx])][s.bestClass]--;
   }
 
   AttribScoreResult ans;
@@ -163,7 +215,7 @@ PairTree::AttribScoreResult PairTree::getNominalAttribScore(DataSet& ds, int64_t
 }
 
 
-PairTree::AttribScoreResult PairTree::getOrderedAttribScore(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
   // Calculate the sum on formula E[Gain(A)] = 2*p(1-p) * \sum_{i=1...N}{D(s_i) * TC^i_{notC}}
   // The following variables will be used later to calculate the bound for a splitting parameter
   auto randomScore = getRandomScore(samplesInfo, std::vector<double>{ 0.5, 0.5 });
@@ -263,11 +315,12 @@ PairTree::AttribScoreResult PairTree::getOrderedAttribScore(DataSet& ds, int64_t
       }
     }
   }
-  std::vector<double> distrib {bestLeftSize / (double)totSamples, (totSamples - bestLeftSize)/(double)totSamples};
-  AttribScoreResult ans;
+
+  AttribResult ans;
   ans.score = bestScore;
-  ans.distrib = distrib;
+  ans.bound = bestBound;
   ans.separator = bestSeparator;
+
   return ans;
 }
 
@@ -355,15 +408,6 @@ long double PairTree::applyBound(long double t, long double xstar, long double s
     return 1;
   }
   return std::exp((-2.0 * t * t) / (xstar * sumSqBounds));
-}
-
-
-int64_t PairTree::getBinBox(int64_t attribValue, int64_t separator) {
-  if (separator >= 0) {
-    if (attribValue <= separator) return 0;
-    return 1;
-  }
-  return attribValue;
 }
 
 
