@@ -26,14 +26,13 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
   }
 
   int64_t bestAttrib = -1;
-  long double bestScore = 0;
+  long double bestScore = ds.getBestClass().second;
   int64_t bestSeparator = -1;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
     auto attrib = getAttribScore(ds, i, percentiles);
     long double score = attrib.first;
     int64_t separator = attrib.second;
-    if (bestAttrib == -1
-        || CompareUtils::compare(score, bestScore) > 0) {
+    if (CompareUtils::compare(score, bestScore) > 0) {
       bestAttrib = i;
       bestScore = score;
       bestSeparator = separator;
@@ -97,7 +96,7 @@ std::pair<long double, int64_t> GreedyTree::getAttribScore(DataSet& ds, int64_t 
 
 
 long double GreedyTree::getNominalScore(DataSet& ds, int64_t attribInx) {
-  long long score = 0;
+  long double score = 0;
   for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
     auto best = ds.getSubDataSet(attribInx, j).getBestClass();
     score += best.second;
