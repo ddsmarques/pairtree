@@ -1,5 +1,6 @@
 #include "TrainReader.h"
 
+#include "AodhaTree.h"
 #include "GreedyBBTree.h"
 #include "GreedyDrawTree.h"
 #include "GreedyTree.h"
@@ -152,6 +153,15 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
 
       std::shared_ptr<PairTree> pairTree = std::make_shared<PairTree>();
       config->trees.push_back(std::dynamic_pointer_cast<Tree>(pairTree));
+    }
+    else if (treeType.compare("aodha") == 0) {
+      std::shared_ptr<ConfigAodha> aodhaConfig = std::make_shared<ConfigAodha>();
+      aodhaConfig->height = getVar<int>(tree, "height");
+      aodhaConfig->name = getVar<std::string>(tree, "name");
+      config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(aodhaConfig));
+
+      std::shared_ptr<AodhaTree> aodhaTree = std::make_shared<AodhaTree>();
+      config->trees.push_back(std::dynamic_pointer_cast<Tree>(aodhaTree));
     }
     else {
       std::cout << "Error! Unknown tree type." << std::endl;
