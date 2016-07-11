@@ -47,7 +47,7 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
   if (bestAttrib == -1) {
     return createLeaf(ds);
   }
-
+  
   // Nominal attribute
   if (bestSeparator == -1) {
     int64_t bestAttribSize = ds.getAttributeSize(bestAttrib);
@@ -89,36 +89,6 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
 }
 
 
-long double AodhaTree::calcImpurity(DataSet& ds) {
-  if (ds.samples_.size() == 0) {
-    return 0;
-  }
-
-  long double sumS = 0;
-  long double sumS0 = 0;
-  long double sumS1 = 0;
-  long double sumSqS0 = 0;
-  long double sumSqS1 = 0;
-
-  for (auto s : ds.samples_) {
-    long double benefit0 = normalizedValue(s->benefit_[0]);
-    long double benefit1 = normalizedValue(s->benefit_[1]);
-
-    sumS += std::abs(benefit0 - benefit1);
-    
-    if (CompareUtils::compare(benefit0, benefit1) > 0) {
-      sumS0 += benefit0 - benefit1;
-      sumSqS0 += (benefit0 - benefit1) * (benefit0 - benefit1);
-    } else {
-      sumS1 += benefit1 - benefit0;
-      sumSqS1 += (benefit1 - benefit0) * (benefit1 - benefit0);
-    }
-  }
-
-  return 0.5*((sumSqS0 + sumSqS1)/sumS - (sumSqS0 * sumSqS0 + sumSqS1 * sumSqS1)/(sumS * sumS));
-}
-
-
 AodhaTree::AttribResult AodhaTree::calcAttribGain(DataSet& ds, int64_t attribInx,
                                                   long double parentImp) {
   if (ds.getAttributeType(attribInx) == AttributeType::STRING) {
@@ -131,8 +101,11 @@ AodhaTree::AttribResult AodhaTree::calcAttribGain(DataSet& ds, int64_t attribInx
 
 AodhaTree::AttribResult AodhaTree::calcNominalGain(DataSet& ds, int64_t attribInx, long double parentImp) {
   long double impurity = 0;
-  for (int i = 0; i < ds.getAttributeSize(attribInx); i++) {
-    impurity += calcImpurity(ds.getSubDataSet(attribInx, i));
+  if (ds.samples_.size() > 0) {
+    for (int i = 0; i < ds.getAttributeSize(attribInx); i++) {
+      auto subDS = ds.getSubDataSet(attribInx, i);
+      impurity += (subDS.samples_.size() / ((long double)ds.samples_.size())) * calcImpurity(subDS);
+    }
   }
 
   AttribResult ans;
@@ -159,30 +132,69 @@ AodhaTree::AttribResult AodhaTree::calcNumericGain(DataSet& ds, int64_t attribIn
   std::sort(ord.begin(), ord.end(),
     [](const Order& a, const Order& b) { return a.attribValue < b.attribValue; });
 
-  DataSet leftDS, rightDS;
-  leftDS.initAllAttributes(ds);
-  rightDS.initAllAttributes(ds);
+  // Calculate the sums for left and right children
+  struct ImpSums {
+    long double sumS = 0;
+    long double sumS0 = 0;
+    long double sumS1 = 0;
+    long double sumSqS0 = 0;
+    long double sumSqS1 = 0;
+  };
+  ImpSums leftSums;
+  ImpSums rightSums;
   for (auto s : ds.samples_) {
-    rightDS.addSample(s);
+    long double benefit0 = normalizedValue(s->benefit_[0]);
+    long double benefit1 = normalizedValue(s->benefit_[1]);
+
+    rightSums.sumS += std::abs(benefit0 - benefit1);
+
+    if (CompareUtils::compare(benefit0, benefit1) > 0) {
+      rightSums.sumS0 += benefit0 - benefit1;
+      rightSums.sumSqS0 += (benefit0 - benefit1) * (benefit0 - benefit1);
+    }
+    else {
+      rightSums.sumS1 += benefit1 - benefit0;
+      rightSums.sumSqS1 += (benefit1 - benefit0) * (benefit1 - benefit0);
+    }
   }
 
+  // Tries all possible splitting parameters
   long double bestImpurity = parentImp;
   int64_t bestSeparator = -1;
-  int64_t separator = 0;
-  while (!rightDS.samples_.empty()) {
-    long double leftImp = calcImpurity(leftDS);
-    long double rightImp = calcImpurity(rightDS);
-    long double impurity = leftImp + rightImp;
+  int64_t i = 0;
+  while (i < ord.size()) {
+    long double leftImp = applyFormula(leftSums.sumS, leftSums.sumS0,
+                                       leftSums.sumS1, leftSums.sumSqS0,
+                                       leftSums.sumSqS1);
+    long double rightImp = applyFormula(rightSums.sumS, rightSums.sumS0,
+                                        rightSums.sumS1, rightSums.sumSqS0,
+                                        rightSums.sumSqS1);
+    long double impurity = (i/((long double)ord.size())) * leftImp
+                           + ((ord.size() - i)/((long double)ord.size())) * rightImp;
     if (CompareUtils::compare(impurity, bestImpurity) < 0) {
       bestImpurity = impurity;
-      bestSeparator = separator;
+      bestSeparator = ord[i-1].attribValue;
     }
+    int64_t start = i;
+    while (i < ord.size() && ord[i].attribValue == ord[start].attribValue) {
+      // Decrease rightSums and add leftSums
+      long double benefit0 = normalizedValue(ord[i].ptr->benefit_[0]);
+      long double benefit1 = normalizedValue(ord[i].ptr->benefit_[1]);
 
-    int64_t curValue = rightDS.samples_.front()->inxValue_[attribInx];
-    while (!rightDS.samples_.empty()
-           && rightDS.samples_.front()->inxValue_[attribInx] == curValue) {
-      leftDS.addSample(rightDS.samples_.front());
-      rightDS.samples_.pop_front();
+      rightSums.sumS -= std::abs(benefit0 - benefit1);
+      leftSums.sumS += std::abs(benefit0 - benefit1);
+      if (CompareUtils::compare(benefit0, benefit1) > 0) {
+        rightSums.sumS0 -= benefit0 - benefit1;
+        rightSums.sumSqS0 -= (benefit0 - benefit1) * (benefit0 - benefit1);
+        leftSums.sumS0 += benefit0 - benefit1;
+        leftSums.sumSqS0 += (benefit0 - benefit1) * (benefit0 - benefit1);
+      } else {
+        rightSums.sumS1 -= benefit1 - benefit0;
+        rightSums.sumSqS1 -= (benefit1 - benefit0) * (benefit1 - benefit0);
+        leftSums.sumS1 += benefit1 - benefit0;
+        leftSums.sumSqS1 += (benefit1 - benefit0) * (benefit1 - benefit0);
+      }
+      i++;
     }
   }
 
@@ -202,6 +214,45 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createLeaf(DataSet& ds) {
   leaf->setLeafValue(best.first);
 
   return leaf;
+}
+
+
+long double AodhaTree::calcImpurity(DataSet& ds) {
+  if (ds.samples_.size() == 0) {
+    return 0;
+  }
+
+  long double sumS = 0;
+  long double sumS0 = 0;
+  long double sumS1 = 0;
+  long double sumSqS0 = 0;
+  long double sumSqS1 = 0;
+
+  for (auto s : ds.samples_) {
+    long double benefit0 = normalizedValue(s->benefit_[0]);
+    long double benefit1 = normalizedValue(s->benefit_[1]);
+
+    sumS += std::abs(benefit0 - benefit1);
+
+    if (CompareUtils::compare(benefit0, benefit1) > 0) {
+      sumS0 += benefit0 - benefit1;
+      sumSqS0 += (benefit0 - benefit1) * (benefit0 - benefit1);
+    }
+    else {
+      sumS1 += benefit1 - benefit0;
+      sumSqS1 += (benefit1 - benefit0) * (benefit1 - benefit0);
+    }
+  }
+
+  return applyFormula(sumS, sumS0, sumS1, sumSqS0, sumSqS1);
+}
+
+
+long double AodhaTree::applyFormula(long double sumS, long double sumS0,
+                                    long double sumS1, long double sumSqS0,
+                                    long double sumSqS1) {
+  if (CompareUtils::compare(sumS, 0) == 0) return 0;
+  return 0.5*((sumSqS0 + sumSqS1) / sumS - (sumSqS0 * sumSqS0 + sumSqS1 * sumSqS1) / (sumS * sumS));
 }
 
 

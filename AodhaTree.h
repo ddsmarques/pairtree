@@ -20,14 +20,18 @@ private:
     long double gain;
     int64_t separator;
   };
-  void calcNormVars(DataSet& ds);
-  long double normalizedValue(long double value);
+  
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height);
-  long double calcImpurity(DataSet& ds);
   AttribResult calcAttribGain(DataSet& ds, int64_t attribInx, long double parentImp);
   AttribResult calcNominalGain(DataSet& ds, int64_t attribInx, long double parentImp);
   AttribResult calcNumericGain(DataSet& ds, int64_t attribInx, long double parentImp);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
+  long double calcImpurity(DataSet& ds);
+  long double applyFormula(long double sumS, long double sumS0,
+                           long double sumS1, long double sumSqS0,
+                           long double sumSqS1);
+  void calcNormVars(DataSet& ds);
+  long double normalizedValue(long double value);
 
   long double minValue_;
   long double maxValue_;
