@@ -19,14 +19,15 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTree(DataSet& ds, std::shared
   calcNormVars(ds);
 
   std::shared_ptr<ConfigAodha> config = std::static_pointer_cast<ConfigAodha>(c);
-  return createTreeRec(ds, config->height);
+  return createTreeRec(ds, config->height, config->minLeaf, config->minGain);
 }
 
 
-std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t height) {
+std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t height,
+                                                           int64_t minLeaf, long double minGain) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
-  if (height == 0) {
+  if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
 
@@ -44,7 +45,7 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
     }
   }
 
-  if (bestAttrib == -1) {
+  if (bestAttrib == -1 || CompareUtils::compare(bestGain, minGain) < 0) {
     return createLeaf(ds);
   }
   
@@ -59,18 +60,26 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
       allDS[s->inxValue_[bestAttrib]].addSample(s);
     }
 
-    std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
-                                                                                bestAttrib);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
+                                                                            bestAttrib);
+    node->setAlpha(1 - bestGain);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
+
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, minGain), { j });
     }
 
     return node;
   }
   // Numeric attribute
   else {
-    std::shared_ptr<DecisionTreeNode> node = std::make_shared<DecisionTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED,
-                                                                                bestAttrib, bestSeparator);
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED,
+                                                                            bestAttrib, bestSeparator);
+    node->setAlpha(1 - bestGain);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
+
     DataSet leftDS, rightDS;
     leftDS.initAllAttributes(ds);
     rightDS.initAllAttributes(ds);
@@ -82,8 +91,8 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1));
-    node->addRightChild(createTreeRec(rightDS, height - 1));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, minGain));
+    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, minGain));
     return node;
   }
 }

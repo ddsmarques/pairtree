@@ -1,5 +1,6 @@
 #include "Trainer.h"
 
+#include "AodhaTree.h"
 #include "CompareUtils.h"
 #include "DataSet.h"
 #include "DataSetBuilder.h"
@@ -270,8 +271,9 @@ Trainer::TreeResult Trainer::runTree(std::shared_ptr<ConfigTrain>& config, int t
   Tester tester;
   TreeResult treeResult;
   Tester::TestResults testResult;
-  if (std::dynamic_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr
-      || std::dynamic_pointer_cast<GreedyTree>(config->trees[treeInx]) != nullptr) {
+  if (config->configTrees[treeInx]->typeName.compare("pair") == 0
+      || config->configTrees[treeInx]->typeName.compare("greedy") == 0
+      || config->configTrees[treeInx]->typeName.compare("aodha") == 0) {
     treeResult = runAlphaSamplesTrees(config, treeInx, trainDS, testDS);
     testResult.savings = treeResult.savings;
     testResult.score = treeResult.score;
@@ -303,13 +305,16 @@ Trainer::TreeResult Trainer::runAlphaSamplesTrees(std::shared_ptr<ConfigTrain>& 
                                                   DataSet& trainDS, DataSet& testDS) {
   std::vector<long double> alphas;
   std::vector<int64_t> minSamples;
-
-  if (std::static_pointer_cast<PairTree>(config->trees[treeInx]) != nullptr) {
+  
+  if (config->configTrees[treeInx]->typeName.compare("pair") == 0) {
     alphas = std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx])->alphas;
     minSamples = std::static_pointer_cast<ConfigPairTree>(config->configTrees[treeInx])->minSamples;
-  } else if (std::static_pointer_cast<GreedyTree>(config->trees[treeInx]) != nullptr) {
+  } else if (config->configTrees[treeInx]->typeName.compare("greedy") == 0) {
     alphas = std::static_pointer_cast<ConfigGreedy>(config->configTrees[treeInx])->alphas;
     minSamples = std::static_pointer_cast<ConfigGreedy>(config->configTrees[treeInx])->minSamples;
+  } else if (config->configTrees[treeInx]->typeName.compare("aodha") == 0) {
+    alphas = std::static_pointer_cast<ConfigAodha>(config->configTrees[treeInx])->alphas;
+    minSamples = std::static_pointer_cast<ConfigAodha>(config->configTrees[treeInx])->minSamples;
   } else {
     Logger::log() << "Error training trees using multiple alphas and samples.";
     TreeResult ans;

@@ -7,6 +7,11 @@
 #include <vector>
 
 class ConfigAodha : public ConfigTree {
+public:
+  int64_t minLeaf;
+  double minGain;
+  std::vector<long double> alphas;
+  std::vector<int64_t> minSamples;
 };
 
 class AodhaTree : public Tree {
@@ -21,7 +26,8 @@ private:
     int64_t separator;
   };
   
-  std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height);
+  std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height,
+                                                  int64_t minLeaf, long double minGain);
   AttribResult calcAttribGain(DataSet& ds, int64_t attribInx, long double parentImp);
   AttribResult calcNominalGain(DataSet& ds, int64_t attribInx, long double parentImp);
   AttribResult calcNumericGain(DataSet& ds, int64_t attribInx, long double parentImp);

@@ -63,6 +63,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigPine> pineConfig = std::make_shared<ConfigPine>();
       pineConfig->height = getVar<int>(tree, "height");
       pineConfig->name = getVar<std::string>(tree, "name");
+      pineConfig->typeName = treeType;
 
       std::string solverType = getVar<std::string>(tree, "solver");
       if (solverType.compare("INTEGER") == 0) {
@@ -88,6 +89,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigGreedy> gtConfig = std::make_shared<ConfigGreedy>();
       gtConfig->height = getVar<int>(tree, "height");
       gtConfig->name = getVar<std::string>(tree, "name");
+      gtConfig->typeName = treeType;
       gtConfig->minLeaf = getVar<int>(tree, "minLeaf");
       gtConfig->percentiles = getVar<int>(tree, "percentiles");
       gtConfig->minGain = getVar<double>(tree, "minGain");
@@ -113,6 +115,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigGreedyBB> gtConfig = std::make_shared<ConfigGreedyBB>();
       gtConfig->height = getVar<int>(tree, "height");
       gtConfig->name = getVar<std::string>(tree, "name");
+      gtConfig->typeName = treeType;
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(gtConfig));
 
       std::shared_ptr<GreedyBBTree> greedyBB = std::make_shared<GreedyBBTree>();
@@ -122,6 +125,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigGreedyDraw> drawConfig = std::make_shared<ConfigGreedyDraw>();
       drawConfig->height = getVar<int>(tree, "height");
       drawConfig->name = getVar<std::string>(tree, "name");
+      drawConfig->typeName = treeType;
       drawConfig->totDraws = getVar<int>(tree, "totDraws");
       drawConfig->minLeaf = getVar<int>(tree, "minLeaf");
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(drawConfig));
@@ -133,6 +137,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigPairTree> pairConfig = std::make_shared<ConfigPairTree>();
       pairConfig->height = getVar<int>(tree, "height");
       pairConfig->name = getVar<std::string>(tree, "name");
+      pairConfig->typeName = treeType;
       pairConfig->maxBound = getVar<double>(tree, "maxBound");
       pairConfig->minLeaf = getVar<int>(tree, "minLeaf");
       pairConfig->useScore = getVar<bool>(tree, "useScore");
@@ -158,6 +163,21 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       std::shared_ptr<ConfigAodha> aodhaConfig = std::make_shared<ConfigAodha>();
       aodhaConfig->height = getVar<int>(tree, "height");
       aodhaConfig->name = getVar<std::string>(tree, "name");
+      aodhaConfig->typeName = treeType;
+      aodhaConfig->minLeaf = getVar<int>(tree, "minLeaf");
+      aodhaConfig->minGain = getVar<double>(tree, "minGain");
+      luabridge::LuaRef minSamples = tree["minSamples"];
+      int i = 0;
+      while (!minSamples[i].isNil()) {
+        aodhaConfig->minSamples.push_back(getVar<int>(minSamples, i));
+        i++;
+      }
+      luabridge::LuaRef alphas = tree["alphas"];
+      i = 0;
+      while (!alphas[i].isNil()) {
+        aodhaConfig->alphas.push_back(getVar<double>(alphas, i));
+        i++;
+      }
       config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(aodhaConfig));
 
       std::shared_ptr<AodhaTree> aodhaTree = std::make_shared<AodhaTree>();
