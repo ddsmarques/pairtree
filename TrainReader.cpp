@@ -6,7 +6,8 @@
 #include "GreedyTree.h"
 #include "Logger.h"
 #include "PairTree.h"
-#include "PineTree.h"
+
+#include <iostream>
 
 
 std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
@@ -59,33 +60,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
   while (!trees[count].isNil()) {
     luabridge::LuaRef tree = trees[count];
     std::string treeType = getVar<std::string>(tree, "treeType");
-    if (treeType.compare("pine") == 0) {
-      std::shared_ptr<ConfigPine> pineConfig = std::make_shared<ConfigPine>();
-      pineConfig->height = getVar<int>(tree, "height");
-      pineConfig->name = getVar<std::string>(tree, "name");
-      pineConfig->typeName = treeType;
-
-      std::string solverType = getVar<std::string>(tree, "solver");
-      if (solverType.compare("INTEGER") == 0) {
-        pineConfig->type = ConfigPine::SolverType::INTEGER;
-      }
-      else if (solverType.compare("CONTINUOUS") == 0) {
-        pineConfig->type = ConfigPine::SolverType::CONTINUOUS;
-      }
-      else if (solverType.compare("CONTINUOUS_AFTER_ROOT") == 0) {
-        pineConfig->type = ConfigPine::SolverType::CONTINUOUS_AFTER_ROOT;
-      }
-      else {
-        std::cout << "Error! Unknown solver type." << std::endl;
-        return nullptr;
-      }
-      config->configTrees.push_back(std::static_pointer_cast<ConfigTree>(pineConfig));
-
-      std::shared_ptr<PineTree> pine = std::make_shared<PineTree>();
-      config->trees.push_back(std::dynamic_pointer_cast<Tree>(pine));
-
-    }
-    else if (treeType.compare("greedy") == 0) {
+    if (treeType.compare("greedy") == 0) {
       std::shared_ptr<ConfigGreedy> gtConfig = std::make_shared<ConfigGreedy>();
       gtConfig->height = getVar<int>(tree, "height");
       gtConfig->name = getVar<std::string>(tree, "name");
