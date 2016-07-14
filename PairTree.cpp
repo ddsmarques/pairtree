@@ -14,14 +14,15 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
   
   std::shared_ptr<ConfigPairTree> config = std::static_pointer_cast<ConfigPairTree>(c);
   return createTreeRec(ds, config->height, config->maxBound, config->minLeaf,
-                       config->useScore, config->useNominalBinary);
+                       config->useScore, config->useNominalBinary, config->useTBound);
 }
 
 
 std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int height,
                                                           double maxBound,
                                                           int64_t minLeaf, bool useScore,
-                                                          bool useNominalBinary) {
+                                                          bool useNominalBinary,
+                                                          bool useTBound) {
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
@@ -34,7 +35,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   int64_t bestSeparator = -1;
   long double bestScore = 0;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    auto attribResult = testAttribute(ds, i, samplesInfo, useNominalBinary);
+    auto attribResult = testAttribute(ds, i, samplesInfo, useNominalBinary, useTBound);
     // If bound satisfy maxBound then gets either greatest score or lowest bound
     if (CompareUtils::compare(attribResult.bound, maxBound) < 0
         && ((useScore && CompareUtils::compare(attribResult.score, bestScore) > 0)
@@ -66,7 +67,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore, useNominalBinary), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound), { j });
     }
     return node;
 
@@ -88,12 +89,12 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
       }
     }
     
-    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary), { bestSeparator });
+    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound), { bestSeparator });
     std::vector<int64_t> rightInxs;
     for (int64_t i = 0; i < ds.getAttributeSize(bestAttrib); i++) {
       if (i != bestSeparator) rightInxs.push_back(i);
     }
-    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary), rightInxs);
+    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound), rightInxs);
 
     return node;
 
@@ -113,8 +114,8 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary));
-    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound));
+    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound));
     return node;
   }
 }
@@ -133,19 +134,21 @@ std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
 
 PairTree::AttribResult PairTree::testAttribute(DataSet& ds, int64_t attribInx,
                                                std::vector<PairTree::SampleInfo>& samplesInfo,
-                                               bool useNominalBinary) {
+                                               bool useNominalBinary,
+                                               bool useTBound) {
   if (ds.getAttributeType(attribInx) == AttributeType::INTEGER
       || ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
-    return testNumeric(ds, attribInx, samplesInfo);
+    return testNumeric(ds, attribInx, samplesInfo, useTBound);
   } else {
-    return testNominal(ds, attribInx, samplesInfo, useNominalBinary);
+    return testNominal(ds, attribInx, samplesInfo, useNominalBinary, useTBound);
   }
 }
 
 
 PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
                                              std::vector<PairTree::SampleInfo>& samplesInfo,
-                                             bool useNominalBinary) {
+                                             bool useNominalBinary,
+                                             bool useTBound) {
   AttribResult best;
   best.bound = 1;
 
@@ -163,7 +166,7 @@ PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
     };
 
     auto scoreResult = calcNominalScore(ds, attribInx, valueBox, boxZero == -1 ? attribSize : 2, samplesInfo);
-    long double bound = getAttribBound(scoreResult, attribInx, samplesInfo);
+    long double bound = getAttribBound(ds, scoreResult, attribInx, samplesInfo, useTBound);
 
     if (CompareUtils::compare(bound, best.bound) < 0) {
       best.bound = bound;
@@ -215,14 +218,24 @@ PairTree::AttribScoreResult PairTree::calcNominalScore(DataSet& ds, int64_t attr
 }
 
 
-PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo) {
+PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx,
+                                             std::vector<PairTree::SampleInfo>& samplesInfo,
+                                             bool useTBound) {
   // Calculate the sum on formula E[Gain(A)] = 2*p(1-p) * \sum_{i=1...N}{D(s_i) * TC^i_{notC}}
   // The following variables will be used later to calculate the bound for a splitting parameter
   auto randomScore = getRandomScore(samplesInfo, std::vector<double>{ 0.5, 0.5 });
   long double randomSum = 2 * randomScore.first;
-  auto auxBound = calcXstarSumsq(attribInx, samplesInfo);
-  long double xstar = auxBound.first;
-  long double sumSq = auxBound.second;
+  long double xstar = 0;
+  long double sumSq = 0;
+  if (useTBound) {
+    xstar = calcTSqVar(ds);
+    sumSq = 1;
+  }
+  else {
+    auto auxBound = calcXstarSumsq(attribInx, samplesInfo);
+    xstar = auxBound.first;
+    sumSq = auxBound.second;
+  }
 
   long double bestBound = 1;
   long double bestScore = 0;
@@ -325,12 +338,14 @@ PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx, std
 }
 
 
-long double PairTree::getAttribBound(AttribScoreResult& attribResult, int64_t attribInx,
-                                     std::vector<PairTree::SampleInfo>& samplesInfo) {
+long double PairTree::getAttribBound(DataSet& ds, AttribScoreResult& attribResult,
+                                     int64_t attribInx,
+                                     std::vector<PairTree::SampleInfo>& samplesInfo,
+                                     bool useTBound) {
   auto aux = getRandomScore(samplesInfo, attribResult.distrib);
   long double expected = aux.first;
   if (CompareUtils::compare(attribResult.score, expected, 1e-7) > 0) {
-    return getProbBound(attribInx, samplesInfo, attribResult.score - expected);
+    return getProbBound(ds, attribInx, samplesInfo, attribResult.score - expected, useTBound);
   }
   return 1;
 }
@@ -374,11 +389,125 @@ std::pair<long double, long double> PairTree::getRandomScore(std::vector<PairTre
 }
 
 
-long double PairTree::getProbBound(int64_t attribInx,
+long double PairTree::getProbBound(DataSet& ds, int64_t attribInx,
                                    std::vector<PairTree::SampleInfo>& samplesInfo,
-                                   long double t) {
-  auto vars = calcXstarSumsq(attribInx, samplesInfo);
-  return applyBound(t, vars.first, vars.second);
+                                   long double t, bool useTBound) {
+  if (useTBound) {
+    long double TSq = calcTSqVar(ds);
+    return applyBound(t, 1, TSq);
+  }
+  else {
+    auto vars = calcXstarSumsq(attribInx, samplesInfo);
+    return applyBound(t, vars.first, vars.second);
+  }
+}
+
+
+long double PairTree::calcTSqVar(DataSet& ds) {
+  int64_t totS0 = 0;
+  for (auto& s : ds.samples_) {
+    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
+      totS0++;
+    }
+  }
+  int64_t totS1 = ds.samples_.size() - totS0;
+  if (totS0 == 0 || totS1 == 0) return 0;
+  std::vector<long double> s0(totS0);
+  std::vector<long double> s1(totS1);
+  int64_t countS0 = 0;
+  int64_t countS1 = 0;
+  for (auto& s : ds.samples_) {
+    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
+      s0[countS0++] = (s->benefit_[0] - s->benefit_[1])*(s->benefit_[0] - s->benefit_[1]);
+    }
+    else {
+      s1[countS1++] = (s->benefit_[1] - s->benefit_[0])*(s->benefit_[1] - s->benefit_[0]);
+    }
+  }
+
+  if (s0.size() < s1.size()) {
+    std::sort(s0.begin(), s0.end(), std::greater<long double>());
+    std::sort(s1.begin(), s1.end(), std::less<long double>());
+    return calcMatchingSums(s0, s1);
+  }
+  else {
+    std::sort(s0.begin(), s0.end(), std::less<long double>());
+    std::sort(s1.begin(), s1.end(), std::greater<long double>());
+    return calcMatchingSums(s1, s0);
+  }
+}
+
+
+long double PairTree::calcSum(const std::vector<long double>& sum, int64_t i,
+                              int64_t j) {
+  if (i > j) return 0;
+  if (i == 0) return sum[j];
+  return sum[j] - sum[i-1];
+}
+
+
+long double PairTree::calcMatchingSums(const std::vector<long double>& a,
+                                       const std::vector<long double>& b) {
+  std::vector<long double> sumA(a.size());
+  std::vector<long double> sumB(b.size());
+  sumA[0] = a[0];
+  for (int64_t i = 1; i < a.size(); i++) {
+    sumA[i] = sumA[i - 1] + a[i];
+  }
+  sumB[0] = b[0];
+  for (int64_t i = 1; i < b.size(); i++) {
+    sumB[i] = sumB[i - 1] + b[i];
+  }
+
+  int64_t L = b.size();
+  int64_t K = a.size();
+  long double matching = 0;
+  int64_t right = 0;
+  int64_t left = 1;
+  for (int64_t i = 0; i <= L - K; i++) {
+    if (right < i) {
+      right++;
+    }
+    else {
+      left--;
+    }
+    while (right <= i + K - 1 && b[right] <= a[left]) {
+      left++;
+      right++;
+    }
+    matching += std::pow(calcSum(sumB, i, right - 1)
+                         + calcSum(sumA, left, K - 1), 0.5);
+  }
+
+  int64_t left2 = K;
+  int64_t right2 = 0;
+  for (int64_t i = L - K + 1; i <= L - 1; i++) {
+    if (right < i) {
+      right++;
+    }
+    else {
+      left--;
+    }
+    if (right == L) {
+      right--;
+    }
+
+    while (right <= L - 1 && b[right] <= a[left]) {
+      left++;
+      right++;
+    }
+    long double partial1 = calcSum(sumA, left, L - i - 1)
+                           + calcSum(sumB, i, right - 1);
+    left2--;
+    while (right2 <= K - (L - i + 1) && b[right2] <= a[left2]) {
+      left2++;
+      right2++;
+    }
+    long double partial2 = calcSum(sumA, left2, K - 1)
+                           + calcSum(sumB, 0, right2 - 1);
+    matching += std::pow(partial1 + partial2, 0.5);
+  }
+  return matching*matching;
 }
 
 

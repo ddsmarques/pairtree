@@ -117,6 +117,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       pairConfig->minLeaf = getVar<int>(tree, "minLeaf");
       pairConfig->useScore = getVar<bool>(tree, "useScore");
       pairConfig->useNominalBinary = getVar<bool>(tree, "useNominalBinary");
+      pairConfig->useTBound = getVar<bool>(tree, "useTBound");
       luabridge::LuaRef minSamples = tree["minSamples"];
       int i = 0;
       while (!minSamples[i].isNil()) {
