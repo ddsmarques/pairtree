@@ -11,7 +11,7 @@ public:
   int64_t minLeaf;
   bool useScore;
   bool useNominalBinary;
-  int boundOption;
+  std::string boundOption;
   std::vector<long double> alphas;
   std::vector<int64_t> minSamples;
 };
@@ -89,6 +89,8 @@ private:
   long double calcMatchingSums(const std::vector<long double>& a, const std::vector<long double>& b);
   long double calcVarSums(const std::vector<long double>& a, const std::vector<long double>& b);
   void createTwoDiffs(DataSet& ds, std::vector<long double>& s0, std::vector<long double>& s1);
+  long double calcMaxD(DataSet& ds);
+  long double calcSplitProb(DataSet& ds, int64_t attribInx);
   
   
 };
