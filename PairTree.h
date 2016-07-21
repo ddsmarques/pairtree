@@ -11,7 +11,7 @@ public:
   int64_t minLeaf;
   bool useScore;
   bool useNominalBinary;
-  bool useTBound;
+  int boundOption;
   std::vector<long double> alphas;
   std::vector<int64_t> minSamples;
 };
@@ -27,6 +27,14 @@ public:
   };
 
 private:
+  enum BoundType { DIFF_BOUND, T_BOUND, VAR_BOUND };
+  struct BoundConstants {
+    long double xstar;
+    long double sumDSq;
+    long double S;
+    long double b;
+    long double TSq;
+  };
   struct AttribScoreResult {
     long double score;
     int64_t separator;
@@ -41,38 +49,46 @@ private:
                                                   double maxBound,
                                                   int64_t minLeaf, bool useScore,
                                                   bool useNominalBinary,
-                                                  bool useTBound);
+                                                  BoundType boundType);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
   void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
 
   AttribResult testAttribute(DataSet& ds, int64_t attribInx,
                              std::vector<PairTree::SampleInfo>& samplesInfo,
-                             bool useNominalBinary, bool useTBound);
+                             bool useNominalBinary, BoundType boundType);
   AttribResult testNumeric(DataSet& ds, int64_t attribInx,
                            std::vector<PairTree::SampleInfo>& samplesInfo,
-                           bool useTBound);
+                           BoundType boundType);
   AttribResult testNominal(DataSet& ds, int64_t attribInx,
                            std::vector<PairTree::SampleInfo>& samplesInfo,
-                           bool useNominalBinary, bool useTBound);
+                           bool useNominalBinary, BoundType boundType);
 
   AttribScoreResult calcNominalScore(DataSet& ds, int64_t attribInx,
                                      std::function<int64_t(int64_t)> valueBox,
                                      int64_t attribSize,
                                      std::vector<PairTree::SampleInfo>& samplesInfo);
 
-  long double getAttribBound(DataSet& ds, AttribScoreResult& attribResult, int64_t attribInx,
-                             std::vector<PairTree::SampleInfo>& samplesInfo,
-                             bool useTBound);
   std::pair<long double, long double> getRandomScore(std::vector<PairTree::SampleInfo>& samplesInfo,
                                                      std::vector<double>& distrib);
-  long double getProbBound(DataSet& ds, int64_t attribInx,
-                           std::vector<PairTree::SampleInfo>& samplesInfo,
-                           long double t, bool useTBound);
-  long double calcTSqVar(DataSet& ds);
+
+  long double getAttribBound(DataSet& ds, AttribScoreResult& attribResult, int64_t attribInx,
+                             std::vector<PairTree::SampleInfo>& samplesInfo,
+                             BoundType boundType);
+  long double applyBound(long double t, BoundConstants constants, BoundType boundType);
+  BoundConstants calcConstants(DataSet& ds, int64_t attribInx,
+                               std::vector<PairTree::SampleInfo>& samplesInfo,
+                               BoundType boundType);
+
+  long double calcConstXstar(DataSet& ds);
+  long double calcConstSumDSq(int64_t attribInx,
+                              std::vector<PairTree::SampleInfo>& samplesInfo);
+  long double calcConstTSq(DataSet& ds);
+  long double calcConstS(DataSet& ds, int64_t attribInx, std::vector<PairTree::SampleInfo>& samplesInfo);
+  long double calcConstb(DataSet& ds, int64_t attribInx);
   long double calcSum(const std::vector<long double>& v, int64_t i, int64_t j);
   long double calcMatchingSums(const std::vector<long double>& a, const std::vector<long double>& b);
-  std::pair<long double, long double> calcXstarSumsq(int64_t attribInx,
-                                                     std::vector<PairTree::SampleInfo>& samplesInfo);
-  long double applyBound(long double t, long double xstar, long double sumSqBounds);
+  long double calcVarSums(const std::vector<long double>& a, const std::vector<long double>& b);
+  void createTwoDiffs(DataSet& ds, std::vector<long double>& s0, std::vector<long double>& s1);
+  
   
 };

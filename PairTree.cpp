@@ -13,8 +13,22 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTree(DataSet& ds, std::shared_
   ErrorUtils::enforce(ds.getTotClasses() == 2, "Error! Number of classes must be 2.");
   
   std::shared_ptr<ConfigPairTree> config = std::static_pointer_cast<ConfigPairTree>(c);
+  BoundType boundOption;
+  if (config->boundOption == 0) {
+    boundOption = BoundType::DIFF_BOUND;
+  }
+  else if (config->boundOption == 1) {
+    boundOption = BoundType::T_BOUND;
+  }
+  else if (config->boundOption == 2) {
+    boundOption = BoundType::VAR_BOUND;
+  }
+  else {
+    Logger::log() << "Wrong boundOption for PairTree. Using default DIFF_BOUND value.";
+    boundOption = BoundType::DIFF_BOUND;
+  }
   return createTreeRec(ds, config->height, config->maxBound, config->minLeaf,
-                       config->useScore, config->useNominalBinary, config->useTBound);
+                       config->useScore, config->useNominalBinary, boundOption);
 }
 
 
@@ -22,7 +36,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
                                                           double maxBound,
                                                           int64_t minLeaf, bool useScore,
                                                           bool useNominalBinary,
-                                                          bool useTBound) {
+                                                          BoundType boundType) {
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
     return createLeaf(ds);
   }
@@ -35,7 +49,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
   int64_t bestSeparator = -1;
   long double bestScore = 0;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    auto attribResult = testAttribute(ds, i, samplesInfo, useNominalBinary, useTBound);
+    auto attribResult = testAttribute(ds, i, samplesInfo, useNominalBinary, boundType);
     // If bound satisfy maxBound then gets either greatest score or lowest bound
     if (CompareUtils::compare(attribResult.bound, maxBound) < 0
         && ((useScore && CompareUtils::compare(attribResult.score, bestScore) > 0)
@@ -67,7 +81,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType), { j });
     }
     return node;
 
@@ -89,12 +103,12 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
       }
     }
     
-    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound), { bestSeparator });
+    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType), { bestSeparator });
     std::vector<int64_t> rightInxs;
     for (int64_t i = 0; i < ds.getAttributeSize(bestAttrib); i++) {
       if (i != bestSeparator) rightInxs.push_back(i);
     }
-    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound), rightInxs);
+    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType), rightInxs);
 
     return node;
 
@@ -114,8 +128,8 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound));
-    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, useTBound));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType));
+    node->addRightChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType));
     return node;
   }
 }
@@ -135,12 +149,12 @@ std::shared_ptr<DecisionTreeNode> PairTree::createLeaf(DataSet& ds) {
 PairTree::AttribResult PairTree::testAttribute(DataSet& ds, int64_t attribInx,
                                                std::vector<PairTree::SampleInfo>& samplesInfo,
                                                bool useNominalBinary,
-                                               bool useTBound) {
+                                               BoundType boundType) {
   if (ds.getAttributeType(attribInx) == AttributeType::INTEGER
       || ds.getAttributeType(attribInx) == AttributeType::DOUBLE) {
-    return testNumeric(ds, attribInx, samplesInfo, useTBound);
+    return testNumeric(ds, attribInx, samplesInfo, boundType);
   } else {
-    return testNominal(ds, attribInx, samplesInfo, useNominalBinary, useTBound);
+    return testNominal(ds, attribInx, samplesInfo, useNominalBinary, boundType);
   }
 }
 
@@ -148,7 +162,7 @@ PairTree::AttribResult PairTree::testAttribute(DataSet& ds, int64_t attribInx,
 PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
                                              std::vector<PairTree::SampleInfo>& samplesInfo,
                                              bool useNominalBinary,
-                                             bool useTBound) {
+                                             BoundType boundType) {
   AttribResult best;
   best.bound = 1;
 
@@ -166,8 +180,8 @@ PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
     };
 
     auto scoreResult = calcNominalScore(ds, attribInx, valueBox, boxZero == -1 ? attribSize : 2, samplesInfo);
-    long double bound = getAttribBound(ds, scoreResult, attribInx, samplesInfo, useTBound);
-
+    long double bound = getAttribBound(ds, scoreResult, attribInx, samplesInfo, boundType);
+    Logger::log() << "bound " << bound;
     if (CompareUtils::compare(bound, best.bound) < 0) {
       best.bound = bound;
       best.score = scoreResult.score;
@@ -220,22 +234,12 @@ PairTree::AttribScoreResult PairTree::calcNominalScore(DataSet& ds, int64_t attr
 
 PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx,
                                              std::vector<PairTree::SampleInfo>& samplesInfo,
-                                             bool useTBound) {
+                                             BoundType boundType) {
   // Calculate the part not depending of p formula E[Gain(A)] = 2*p(1-p) * N/N-1 * \sum_{i=1...N}{D(s_i) * TC^i_{notC}}
   // The following variables will be used later to calculate the bound for a splitting parameter
   auto randomScore = getRandomScore(samplesInfo, std::vector<double>{ 0.5, 0.5 });
   long double randomSum = 2 * randomScore.first;
-  long double xstar = 0;
-  long double sumSq = 0;
-  if (useTBound) {
-    xstar = calcTSqVar(ds);
-    sumSq = 1;
-  }
-  else {
-    auto auxBound = calcXstarSumsq(attribInx, samplesInfo);
-    xstar = auxBound.first;
-    sumSq = auxBound.second;
-  }
+  BoundConstants constants = calcConstants(ds, attribInx, samplesInfo, boundType);
 
   long double bestBound = 1;
   long double bestScore = 0;
@@ -319,7 +323,7 @@ PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx,
     if (i == totSamples - 1 || (ordSamples[i].attribValue != ordSamples[i + 1].attribValue)) {
       long double p = (i + 1) / ((long double)totSamples);
       long double expected = 2 * p * (1 - p) * randomSum;
-      long double bound = applyBound(score - expected, xstar, sumSq);
+      long double bound = applyBound(score - expected, constants, boundType);
       if (CompareUtils::compare(bound, bestBound) < 0) {
         bestSeparator = ordSamples[i].attribValue;
         bestBound = bound;
@@ -335,19 +339,6 @@ PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx,
   ans.separator = bestSeparator;
 
   return ans;
-}
-
-
-long double PairTree::getAttribBound(DataSet& ds, AttribScoreResult& attribResult,
-                                     int64_t attribInx,
-                                     std::vector<PairTree::SampleInfo>& samplesInfo,
-                                     bool useTBound) {
-  auto aux = getRandomScore(samplesInfo, attribResult.distrib);
-  long double expected = aux.first;
-  if (CompareUtils::compare(attribResult.score, expected, 1e-7) > 0) {
-    return getProbBound(ds, attribInx, samplesInfo, attribResult.score - expected, useTBound);
-  }
-  return 1;
 }
 
 
@@ -370,8 +361,8 @@ std::pair<long double, long double> PairTree::getRandomScore(std::vector<PairTre
     }
     totalClass[s.bestClass]--;
   }
-  expected = (samplesInfo.size() / ((long double)samplesInfo.size())) * expected /totPairs;
-  
+  expected = (samplesInfo.size() / ((long double)samplesInfo.size())) * expected / totPairs;
+
   totalClass = totalClassCopy;
   long double var = 0;
   for (auto s : samplesInfo) {
@@ -389,41 +380,106 @@ std::pair<long double, long double> PairTree::getRandomScore(std::vector<PairTre
 }
 
 
-long double PairTree::getProbBound(DataSet& ds, int64_t attribInx,
-                                   std::vector<PairTree::SampleInfo>& samplesInfo,
-                                   long double t, bool useTBound) {
-  if (useTBound) {
-    long double TSq = calcTSqVar(ds);
-    return applyBound(t, 1, TSq);
+long double PairTree::getAttribBound(DataSet& ds, AttribScoreResult& attribResult,
+                                     int64_t attribInx,
+                                     std::vector<PairTree::SampleInfo>& samplesInfo,
+                                     BoundType boundType) {
+  auto aux = getRandomScore(samplesInfo, attribResult.distrib);
+  long double expected = aux.first;
+  if (CompareUtils::compare(attribResult.score, expected, 1e-7) > 0) {
+    BoundConstants constants = calcConstants(ds, attribInx, samplesInfo, boundType);
+    return applyBound(attribResult.score - expected, constants, boundType);
   }
-  else {
-    auto vars = calcXstarSumsq(attribInx, samplesInfo);
-    return applyBound(t, vars.first, vars.second);
+  return 1;
+}
+
+
+long double PairTree::applyBound(long double t, BoundConstants constants, BoundType boundType) {
+  // The bounds only work for t > 0
+  if (CompareUtils::compare(t, 0) <= 0) {
+    return 1;
+  }
+
+  if (boundType == BoundType::DIFF_BOUND) {
+    if (CompareUtils::compare(constants.xstar * constants.sumDSq, 0) == 0) {
+      return 1;
+    }
+    return std::exp((-2.0 * t * t) / (constants.xstar * constants.sumDSq));
+  }
+  else if (boundType == BoundType::T_BOUND) {
+    if (CompareUtils::compare(constants.TSq, 0) == 0) {
+      return 1;
+    }
+    return std::exp((-2.0 * t * t) / constants.TSq);
+  }
+  else if (boundType == BoundType::VAR_BOUND) {
+    long double denominator = 25.0 * constants.xstar * (constants.S + constants.b * t / 3.0);
+    if (CompareUtils::compare(denominator, 0) == 0) {
+      return 1;
+    }
+    return std::exp((-8.0 * t * t) / denominator);
   }
 }
 
 
-long double PairTree::calcTSqVar(DataSet& ds) {
-  int64_t totS0 = 0;
-  for (auto& s : ds.samples_) {
-    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
-      totS0++;
-    }
+PairTree::BoundConstants PairTree::calcConstants(DataSet& ds, int64_t attribInx,
+                                                 std::vector<PairTree::SampleInfo>& samplesInfo,
+                                                 BoundType boundType) {
+  BoundConstants ans;
+  if (boundType == BoundType::DIFF_BOUND) {
+    ans.xstar = calcConstXstar(ds);
+    ans.sumDSq = calcConstSumDSq(attribInx, samplesInfo);
   }
-  int64_t totS1 = ds.samples_.size() - totS0;
-  if (totS0 == 0 || totS1 == 0) return 0;
-  std::vector<long double> s0(totS0);
-  std::vector<long double> s1(totS1);
-  int64_t countS0 = 0;
-  int64_t countS1 = 0;
-  for (auto& s : ds.samples_) {
+  else if (boundType == BoundType::T_BOUND) {
+    ans.TSq = calcConstTSq(ds);
+  }
+  else if (boundType == BoundType::VAR_BOUND) {
+    ans.xstar = calcConstXstar(ds);
+    ans.S = calcConstS(ds, attribInx, samplesInfo);
+    ans.b = calcConstb(ds, attribInx);
+  }
+  return ans;
+}
+
+
+long double PairTree::calcConstXstar(DataSet& ds) {
+  int64_t best0 = 0;
+  int64_t best1 = 0;
+  for (auto s : ds.samples_) {
     if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
-      s0[countS0++] = (s->benefit_[0] - s->benefit_[1])*(s->benefit_[0] - s->benefit_[1]);
+      best0++;
     }
     else {
-      s1[countS1++] = (s->benefit_[1] - s->benefit_[0])*(s->benefit_[1] - s->benefit_[0]);
+      best1++;
     }
   }
+  return std::max(best0, best1);
+}
+
+
+long double PairTree::calcConstSumDSq(int64_t attribInx,
+                                      std::vector<PairTree::SampleInfo>& samplesInfo) {
+  std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
+
+  for (auto s : samplesInfo) {
+    totalClass[s.bestClass]++;
+  }
+
+  long double sumDSq = 0;
+  for (auto s : samplesInfo) {
+    int notBestClass = (s.bestClass + 1) % 2;
+    sumDSq += (s.diff * s.diff) * totalClass[notBestClass];
+    totalClass[s.bestClass]--;
+  }
+
+  return sumDSq;
+}
+
+
+long double PairTree::calcConstTSq(DataSet& ds) {
+  std::vector<long double> s0;
+  std::vector<long double> s1;
+  createTwoDiffs(ds, s0, s1);
 
   if (s0.size() < s1.size()) {
     std::sort(s0.begin(), s0.end(), std::greater<long double>());
@@ -438,16 +494,75 @@ long double PairTree::calcTSqVar(DataSet& ds) {
 }
 
 
+long double PairTree::calcConstS(DataSet& ds, int64_t attribInx,
+                                 std::vector<PairTree::SampleInfo>& samplesInfo) {
+  long double sumVarSq = calcConstSumDSq(attribInx, samplesInfo);
+
+  std::vector<long double> freqs = ds.getAttributeCurrentFullFrequency(attribInx);
+  long double sumProbs = 0;
+  for (int64_t i = 0; i < ds.getAttributeSize(attribInx); i++) {
+    sumProbs += freqs[i] * (1 - freqs[i]);
+  }
+
+  return sumVarSq * sumProbs - sumVarSq * sumProbs * sumProbs;
+}
+
+
+long double PairTree::calcConstb(DataSet& ds, int64_t attribInx) {
+  long double maxBest0 = std::numeric_limits<long double>::min();
+  long double maxBest1 = std::numeric_limits<long double>::min();
+  for (auto s : ds.samples_) {
+    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
+      maxBest0 = std::max(maxBest0, (long double)s->benefit_[0] - s->benefit_[1]);
+    }
+    else {
+      maxBest1 = std::max(maxBest1, (long double)s->benefit_[1] - s->benefit_[0]);
+    }
+  }
+
+  std::vector<long double> freqs = ds.getAttributeCurrentFullFrequency(attribInx);
+  long double sumProbs = 0;
+  for (int64_t i = 0; i < ds.getAttributeSize(attribInx); i++) {
+    sumProbs += freqs[i] * (1 - freqs[i]);
+  }
+  return std::min(maxBest0, maxBest1) * (1 - sumProbs);
+}
+
+
+void PairTree::createTwoDiffs(DataSet& ds, std::vector<long double>& s0,
+                              std::vector<long double>& s1) {
+  int64_t totS0 = 0;
+  for (auto& s : ds.samples_) {
+    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
+      totS0++;
+    }
+  }
+  int64_t totS1 = ds.samples_.size() - totS0;
+  s0.resize(totS0);
+  s1.resize(totS1);
+  int64_t countS0 = 0;
+  int64_t countS1 = 0;
+  for (auto& s : ds.samples_) {
+    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) > 0) {
+      s0[countS0++] = (s->benefit_[0] - s->benefit_[1])*(s->benefit_[0] - s->benefit_[1]);
+    }
+    else {
+      s1[countS1++] = (s->benefit_[1] - s->benefit_[0])*(s->benefit_[1] - s->benefit_[0]);
+    }
+  }
+}
+
+
 long double PairTree::calcSum(const std::vector<long double>& sum, int64_t i,
                               int64_t j) {
   if (i > j) return 0;
   if (i == 0) return sum[j];
-  return sum[j] - sum[i-1];
+  return sum[j] - sum[i - 1];
 }
 
 
 long double PairTree::calcMatchingSums(const std::vector<long double>& a,
-                                       const std::vector<long double>& b) {
+  const std::vector<long double>& b) {
   std::vector<long double> sumA(a.size());
   std::vector<long double> sumB(b.size());
   sumA[0] = a[0];
@@ -476,7 +591,7 @@ long double PairTree::calcMatchingSums(const std::vector<long double>& a,
       right++;
     }
     matching += std::pow(calcSum(sumB, i, right - 1)
-                         + calcSum(sumA, left, K - 1), 0.5);
+      + calcSum(sumA, left, K - 1), 0.5);
   }
 
   int64_t left2 = K;
@@ -497,46 +612,39 @@ long double PairTree::calcMatchingSums(const std::vector<long double>& a,
       right++;
     }
     long double partial1 = calcSum(sumA, left, L - i - 1)
-                           + calcSum(sumB, i, right - 1);
+      + calcSum(sumB, i, right - 1);
     left2--;
     while (right2 <= K - (L - i + 1) && b[right2] <= a[left2]) {
       left2++;
       right2++;
     }
     long double partial2 = calcSum(sumA, left2, K - 1)
-                           + calcSum(sumB, 0, right2 - 1);
+      + calcSum(sumB, 0, right2 - 1);
     matching += std::pow(partial1 + partial2, 0.5);
   }
   return matching*matching;
 }
 
 
-std::pair<long double, long double> PairTree::calcXstarSumsq(int64_t attribInx,
-                                                             std::vector<PairTree::SampleInfo>& samplesInfo) {
-  std::vector<int64_t> totalClass(2, 0); // totalClass[0] = number of samples whose best class is 0
-
-  for (auto s : samplesInfo) {
-    totalClass[s.bestClass]++;
-  }
-  long double xstar = std::max(totalClass[0], totalClass[1]);
-
-  long double sumSqBounds = 0;
-  for (auto s : samplesInfo) {
-    int notBestClass = (s.bestClass + 1) % 2;
-    sumSqBounds += (s.diff * s.diff) * totalClass[notBestClass];
-    totalClass[s.bestClass]--;
+long double PairTree::calcVarSums(const std::vector<long double>& a,
+                                  const std::vector<long double>& b) {
+  int K = a.size();
+  int L = b.size();
+  std::vector<long double> sumBSq(L);
+  sumBSq[0] = b[0] * b[0];
+  for (int i = 1; i < L; i++) {
+    sumBSq[i] = sumBSq[i - 1] + b[i] * b[i];
   }
 
-  return std::pair<long double, long double>(xstar, sumSqBounds);
-}
-
-
-long double PairTree::applyBound(long double t, long double xstar, long double sumSqBounds) {
-  // Tries to avoid division by 0
-  if (CompareUtils::compare(t, 0) <= 0 || CompareUtils::compare(xstar * sumSqBounds, 0) == 0) {
-    return 1;
+  long double ans = 0;
+  int p = 0;
+  for (int i = 0; i < K; i++) {
+    while (p < L && a[i] >= b[p]) {
+      p++;
+    }
+    ans += calcSum(sumBSq, 0, p - 1) + (L - p) * a[i] * a[i];
   }
-  return std::exp((-2.0 * t * t) / (xstar * sumSqBounds));
+  return ans;
 }
 
 

@@ -37,7 +37,9 @@ public:
 
   int64_t getAttributeSize(int64_t attribInx);
 
-  int64_t getAttributeFrequency(int64_t attribInx, int64_t valueInx);
+  int64_t getAttributeOriginalFrequency(int64_t attribInx, int64_t valueInx);
+
+  std::vector<long double> getAttributeCurrentFullFrequency(int64_t attribInx);
 
   std::string getAttributeName(int64_t attribInx);
 

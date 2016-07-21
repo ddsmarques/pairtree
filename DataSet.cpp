@@ -98,7 +98,7 @@ int64_t DataSet::getAttributeSize(int64_t attribInx) {
   }
 }
 
-int64_t DataSet::getAttributeFrequency(int64_t attribInx, int64_t valueInx) {
+int64_t DataSet::getAttributeOriginalFrequency(int64_t attribInx, int64_t valueInx) {
   ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
                       "Out of bounds");
   if (attribInfo_[attribInx].first == AttributeType::INTEGER) {
@@ -111,6 +111,19 @@ int64_t DataSet::getAttributeFrequency(int64_t attribInx, int64_t valueInx) {
     return stringAttributes_[attribInfo_[attribInx].second]->getFrequency(valueInx);
   }
 }
+
+
+std::vector<long double> DataSet::getAttributeCurrentFullFrequency(int64_t attribInx) {
+  std::vector<long double> freqs(getAttributeSize(attribInx), 0);
+  for (auto s : samples_) {
+    freqs[s->inxValue_[attribInx]]++;
+  }
+  for (int i = 0; i < getAttributeSize(attribInx); i++) {
+    freqs[i] = freqs[i] / samples_.size();
+  }
+  return freqs;
+}
+
 
 std::string DataSet::getAttributeName(int64_t attribInx) {
   ErrorUtils::enforce(attribInx >= 0 && attribInx < attribInfo_.size(),
