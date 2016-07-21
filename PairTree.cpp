@@ -181,7 +181,6 @@ PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
 
     auto scoreResult = calcNominalScore(ds, attribInx, valueBox, boxZero == -1 ? attribSize : 2, samplesInfo);
     long double bound = getAttribBound(ds, scoreResult, attribInx, samplesInfo, boundType);
-    Logger::log() << "bound " << bound;
     if (CompareUtils::compare(bound, best.bound) < 0) {
       best.bound = bound;
       best.score = scoreResult.score;
@@ -235,7 +234,7 @@ PairTree::AttribScoreResult PairTree::calcNominalScore(DataSet& ds, int64_t attr
 PairTree::AttribResult PairTree::testNumeric(DataSet& ds, int64_t attribInx,
                                              std::vector<PairTree::SampleInfo>& samplesInfo,
                                              BoundType boundType) {
-  // Calculate the part not depending of p formula E[Gain(A)] = 2*p(1-p) * N/N-1 * \sum_{i=1...N}{D(s_i) * TC^i_{notC}}
+  // Calculate the sum on formula E[Gain(A)] = 2*p(1-p) * \sum_{i=1...N}{D(s_i) * TC^i_{notC}}
   // The following variables will be used later to calculate the bound for a splitting parameter
   auto randomScore = getRandomScore(samplesInfo, std::vector<double>{ 0.5, 0.5 });
   long double randomSum = 2 * randomScore.first;
@@ -361,7 +360,7 @@ std::pair<long double, long double> PairTree::getRandomScore(std::vector<PairTre
     }
     totalClass[s.bestClass]--;
   }
-  expected = (samplesInfo.size() / ((long double)samplesInfo.size())) * expected / totPairs;
+  expected = expected / totPairs;
 
   totalClass = totalClassCopy;
   long double var = 0;
