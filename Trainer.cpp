@@ -48,8 +48,8 @@ void Trainer::train(std::string fileName) {
   DataSet trainDS;
   DataSet testDS;
   if (config->trainMode->type == ConfigTrainMode::trainType::TEST_SET) {
-    trainDS = builder.buildFromFile(config->dataSetFile, config->classColStart);
-    testDS = builder.buildFromFile(config->trainMode->testFileName, config->classColStart);
+    builder.buildTrainTestFromFile(config->dataSetFile, config->trainMode->testFileName,
+                                   config->classColStart, trainDS, testDS);
   }
   else if (config->trainMode->type == ConfigTrainMode::trainType::TRAINING_SET) {
     trainDS = builder.buildFromFile(config->dataSetFile, config->classColStart);
