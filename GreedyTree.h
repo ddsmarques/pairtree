@@ -24,6 +24,7 @@ private:
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height,
                                                   int64_t minLeaf, int64_t percentiles,
                                                   double minGain);
+  bool isAllSameClass(DataSet& ds);
   std::pair<long double, int64_t> getAttribScore(DataSet& ds, int64_t attribInx,
                                                  int64_t percentiles);
   long double getNominalScore(DataSet& ds, int64_t attribInx);

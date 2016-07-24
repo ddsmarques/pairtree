@@ -51,6 +51,7 @@ private:
                                                   bool useNominalBinary,
                                                   BoundType boundType);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
+  bool isAllSameClass(DataSet& ds);
   void initSampleInfo(DataSet& ds, std::vector<PairTree::SampleInfo>& samplesInfo);
 
   AttribResult testAttribute(DataSet& ds, int64_t attribInx,

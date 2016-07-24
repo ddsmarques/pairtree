@@ -27,7 +27,8 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
                                                            int64_t minLeaf, long double minGain) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
-  if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)) {
+  if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)
+      || isAllSameClass(ds)) {
     return createLeaf(ds);
   }
 
@@ -95,6 +96,22 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
     node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, minGain));
     return node;
   }
+}
+
+
+bool AodhaTree::isAllSameClass(DataSet& ds) {
+  int64_t tot0 = 0;
+  int64_t tot1 = 0;
+  for (auto s : ds.samples_) {
+    if (CompareUtils::compare(s->benefit_[0], s->benefit_[1]) >= 0) {
+      tot0++;
+    }
+    else {
+      tot1++;
+    }
+    if (tot0 > 0 && tot1 > 0) return false;
+  }
+  return tot0 == 0 || tot1 == 0;
 }
 
 
