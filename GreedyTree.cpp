@@ -187,5 +187,5 @@ long double GreedyTree::calcGain(DataSet& ds, long double score) {
   auto bestClass = ds.getBestClass();
   if (CompareUtils::compare(bestClass.second, 0) == 0) return 0;
 
-  return (score - bestClass.second) / -bestClass.second;
+  return (score - bestClass.second) / std::abs(bestClass.second);
 }
