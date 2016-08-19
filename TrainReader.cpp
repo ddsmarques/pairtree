@@ -68,6 +68,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       gtConfig->minLeaf = getVar<int>(tree, "minLeaf");
       gtConfig->percentiles = getVar<int>(tree, "percentiles");
       gtConfig->minGain = getVar<double>(tree, "minGain");
+      gtConfig->useNominalBinary = getVar<bool>(tree, "useNominalBinary");
       luabridge::LuaRef minSamples = tree["minSamples"];
       int i = 0;
       while (!minSamples[i].isNil()) {

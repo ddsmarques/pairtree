@@ -11,6 +11,7 @@ public:
   int64_t minLeaf;
   int64_t percentiles;
   double minGain;
+  bool useNominalBinary;
   std::vector<long double> alphas;
   std::vector<int64_t> minSamples;
 };
@@ -23,11 +24,11 @@ public:
 private:
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height,
                                                   int64_t minLeaf, int64_t percentiles,
-                                                  double minGain);
+                                                  double minGain, bool useNominalBinary);
   bool isAllSameClass(DataSet& ds);
   std::pair<long double, int64_t> getAttribScore(DataSet& ds, int64_t attribInx,
-                                                 int64_t percentiles);
-  long double getNominalScore(DataSet& ds, int64_t attribInx);
+                                                 int64_t percentiles, bool useNominalBinary);
+  std::pair<long double, int64_t> getNominalScore(DataSet& ds, int64_t attribInx, bool useNominalBinary);
   std::pair<long double, int64_t> getOrderedScore(DataSet& ds, int64_t attribInx,
                                                   int64_t percentiles);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);

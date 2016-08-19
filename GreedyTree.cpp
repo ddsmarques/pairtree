@@ -14,11 +14,12 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTree(DataSet& ds, std::share
   std::shared_ptr<ConfigGreedy> config = std::static_pointer_cast<ConfigGreedy>(c);
   std::vector<bool> availableAttrib(ds.getTotAttributes(), true);
   return createTreeRec(ds, config->height, config->minLeaf, config->percentiles,
-                       config->minGain);
+                       config->minGain, config->useNominalBinary);
 }
 
 std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t height, int64_t minLeaf,
-                                                            int64_t percentiles, double minGain) {
+                                                            int64_t percentiles, double minGain,
+                                                            bool useNominalBinary) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
 
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)
@@ -30,7 +31,7 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
   long double bestScore = ds.getBestClass().second;
   int64_t bestSeparator = -1;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    auto attrib = getAttribScore(ds, i, percentiles);
+    auto attrib = getAttribScore(ds, i, percentiles, useNominalBinary);
     long double score = attrib.first;
     int64_t separator = attrib.second;
     if (CompareUtils::compare(score, bestScore) > 0) {
@@ -55,14 +56,43 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
     }
 
     std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
-                                                                        bestAttrib);
+      bestAttrib);
     node->setAlpha(1 - bestGain);
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, percentiles, minGain), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, percentiles, minGain, useNominalBinary), { j });
     }
     return node;
+
+  // Nominal attribute separating one value from the rest
+  } else if(bestSeparator != -1 && ds.getAttributeType(bestAttrib) == AttributeType::STRING) {
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    node->setAlpha(1 - bestGain);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
+
+    DataSet leftDS, rightDS;
+    leftDS.initAllAttributes(ds);
+    rightDS.initAllAttributes(ds);
+    for (const auto& s : ds.samples_) {
+      if (s->inxValue_[bestAttrib] == bestSeparator) {
+        leftDS.addSample(s);
+      }
+      else {
+        rightDS.addSample(s);
+      }
+    }
+
+    node->addChild(createTreeRec(leftDS, height - 1, minLeaf, percentiles, minGain, useNominalBinary), { bestSeparator });
+    std::vector<int64_t> rightInxs;
+    for (int64_t i = 0; i < ds.getAttributeSize(bestAttrib); i++) {
+      if (i != bestSeparator) rightInxs.push_back(i);
+    }
+    node->addChild(createTreeRec(rightDS, height - 1, minLeaf, percentiles, minGain, useNominalBinary), rightInxs);
+
+    return node;
+
   } else {
     std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED, bestAttrib, bestSeparator);
     node->setAlpha(1 - bestGain);
@@ -79,8 +109,8 @@ std::shared_ptr<DecisionTreeNode> GreedyTree::createTreeRec(DataSet& ds, int64_t
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, percentiles, minGain));
-    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, percentiles, minGain));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, percentiles, minGain, useNominalBinary));
+    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, percentiles, minGain, useNominalBinary));
     return node;
   }
 }
@@ -103,22 +133,54 @@ bool GreedyTree::isAllSameClass(DataSet& ds) {
 
 
 std::pair<long double, int64_t> GreedyTree::getAttribScore(DataSet& ds, int64_t attribInx,
-                                                           int64_t percentiles) {
+                                                           int64_t percentiles, bool useNominalBinary) {
   if (ds.getAttributeType(attribInx) == AttributeType::STRING) {
-    return std::make_pair(getNominalScore(ds, attribInx), -1);
+    return getNominalScore(ds, attribInx, useNominalBinary);
   } else {
     return getOrderedScore(ds, attribInx, percentiles);
   }
 }
 
 
-long double GreedyTree::getNominalScore(DataSet& ds, int64_t attribInx) {
+std::pair<long double, int64_t> GreedyTree::getNominalScore(DataSet& ds, int64_t attribInx, bool useNominalBinary) {
   long double score = 0;
-  for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
-    auto best = ds.getSubDataSet(attribInx, j).getBestClass();
-    score += best.second;
+
+  if (useNominalBinary) {
+    std::vector<std::vector<long double>> subClassScore(ds.getAttributeSize(attribInx),
+                                                        std::vector<long double>(2, 0));
+    for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
+      subClassScore[j][0] = ds.getSubDataSet(attribInx, j).getClassBenefit(0);
+      subClassScore[j][1] = ds.getSubDataSet(attribInx, j).getClassBenefit(1);
+    }
+
+    long double sumClass0 = 0;
+    long double sumClass1 = 0;
+    for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
+      sumClass0 += subClassScore[j][0];
+      sumClass1 += subClassScore[j][1];
+    }
+    score = 0;
+    int64_t bestSeparator = -1;
+    long double currScore = 0;
+    for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
+      long double currScore = std::max(subClassScore[j][0], subClassScore[j][1])
+                              + std::max(sumClass0 - subClassScore[j][0],
+                                         sumClass1 - subClassScore[j][1]);
+      if (bestSeparator == -1 || CompareUtils::compare(score, currScore) < 0) {
+        score = currScore;
+        bestSeparator = j;
+      }
+    }
+
+    return std::pair<long double, int64_t>(score, bestSeparator);
   }
-  return score;
+  else {
+    for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
+      auto best = ds.getSubDataSet(attribInx, j).getBestClass();
+      score += best.second;
+    }
+    return std::pair<long double, int64_t>(score, -1);
+  }
 }
 
 
