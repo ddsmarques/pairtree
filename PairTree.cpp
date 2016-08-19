@@ -109,7 +109,7 @@ std::shared_ptr<DecisionTreeNode> PairTree::createTreeRec(DataSet& ds, int heigh
     for (int64_t i = 0; i < ds.getAttributeSize(bestAttrib); i++) {
       if (i != bestSeparator) rightInxs.push_back(i);
     }
-    node->addChild(createTreeRec(leftDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType), rightInxs);
+    node->addChild(createTreeRec(rightDS, height - 1, maxBound, minLeaf, useScore, useNominalBinary, boundType), rightInxs);
 
     return node;
 
