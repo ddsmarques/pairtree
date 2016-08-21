@@ -38,9 +38,20 @@ std::shared_ptr<DecisionTreeNode> ExtrasTreeNode::getTree(long double targetAlph
   } else {
     node = std::make_shared<DecisionTreeNode>(type_, attribCol_, splitValue_);
     if (node->getType() == NodeType::REGULAR_NOMINAL) {
-      for (auto const& child : children_) {
-        node->addChild(std::static_pointer_cast<ExtrasTreeNode>(child.second)->getTree(targetAlpha, minSamples),
-                       { child.first });
+      std::map<int64_t, std::shared_ptr<DecisionTreeNode>>::iterator it, itPrev;
+      for (it = children_.begin(); it != children_.end(); it++) {
+        bool found = false;
+        for (itPrev = children_.begin(); itPrev != it; itPrev++) {
+          if (it->second == itPrev->second) {
+            found = true;
+            node->addChild(std::static_pointer_cast<ExtrasTreeNode>(node->children_[itPrev->first]), { it->first });
+            break;
+          }
+        }
+        if (!found) {
+          node->addChild(std::static_pointer_cast<ExtrasTreeNode>(it->second)->getTree(targetAlpha, minSamples),
+                         { it->first });
+        }
       }
     } else {
       node->addLeftChild(std::static_pointer_cast<ExtrasTreeNode>(getLeftChild())->getTree(targetAlpha, minSamples));
