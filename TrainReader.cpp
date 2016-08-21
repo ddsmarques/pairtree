@@ -143,6 +143,7 @@ std::shared_ptr<ConfigTrain> TrainReader::read(std::string fileName) {
       aodhaConfig->typeName = treeType;
       aodhaConfig->minLeaf = getVar<int>(tree, "minLeaf");
       aodhaConfig->minGain = getVar<double>(tree, "minGain");
+      aodhaConfig->useNominalBinary = getVar<bool>(tree, "useNominalBinary");
       luabridge::LuaRef minSamples = tree["minSamples"];
       int i = 0;
       while (!minSamples[i].isNil()) {

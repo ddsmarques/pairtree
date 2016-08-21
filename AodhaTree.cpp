@@ -19,14 +19,15 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTree(DataSet& ds, std::shared
   calcNormVars(ds);
 
   std::shared_ptr<ConfigAodha> config = std::static_pointer_cast<ConfigAodha>(c);
-  return createTreeRec(ds, config->height, config->minLeaf, config->minGain);
+  return createTreeRec(ds, config->height, config->minLeaf, config->minGain,
+                       config->useNominalBinary);
 }
 
 
 std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t height,
-                                                           int64_t minLeaf, long double minGain) {
+                                                           int64_t minLeaf, long double minGain,
+                                                           bool useNominalBinary) {
   ErrorUtils::enforce(ds.getTotClasses() > 0, "Invalid data set.");
-
   if (height == 0 || (minLeaf > 0 && ds.samples_.size() <= minLeaf)
       || isAllSameClass(ds)) {
     return createLeaf(ds);
@@ -37,7 +38,7 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
   long double bestGain = 0;
   int64_t bestSeparator = -1;
   for (int64_t i = 0; i < ds.getTotAttributes(); i++) {
-    AttribResult result = calcAttribGain(ds, i, impurity);
+    AttribResult result = calcAttribGain(ds, i, impurity, useNominalBinary);
 
     if (CompareUtils::compare(result.gain, bestGain) > 0) {
       bestAttrib = i;
@@ -62,19 +63,47 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
     }
 
     std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL,
-                                                                            bestAttrib);
+      bestAttrib);
     node->setAlpha(1 - bestGain);
     node->setNumSamples(ds.samples_.size());
     node->setLeafValue(ds.getBestClass().first);
 
     for (int64_t j = 0; j < bestAttribSize; j++) {
-      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, minGain), { j });
+      node->addChild(createTreeRec(allDS[j], height - 1, minLeaf, minGain, useNominalBinary), { j });
     }
 
     return node;
-  }
+
+  // Nominal attribute separating one value from the rest
+  } else if (bestSeparator != -1 && ds.getAttributeType(bestAttrib) == AttributeType::STRING) {
+    std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_NOMINAL, bestAttrib);
+    node->setAlpha(1 - bestGain);
+    node->setNumSamples(ds.samples_.size());
+    node->setLeafValue(ds.getBestClass().first);
+
+    DataSet leftDS, rightDS;
+    leftDS.initAllAttributes(ds);
+    rightDS.initAllAttributes(ds);
+    for (const auto& s : ds.samples_) {
+      if (s->inxValue_[bestAttrib] == bestSeparator) {
+        leftDS.addSample(s);
+      }
+      else {
+        rightDS.addSample(s);
+      }
+    }
+
+    node->addChild(createTreeRec(leftDS, height - 1, minLeaf, minGain, useNominalBinary), { bestSeparator });
+    std::vector<int64_t> rightInxs;
+    for (int64_t i = 0; i < ds.getAttributeSize(bestAttrib); i++) {
+      if (i != bestSeparator) rightInxs.push_back(i);
+    }
+    node->addChild(createTreeRec(rightDS, height - 1, minLeaf, minGain, useNominalBinary), rightInxs);
+
+    return node;
+
   // Numeric attribute
-  else {
+  } else {
     std::shared_ptr<ExtrasTreeNode> node = std::make_shared<ExtrasTreeNode>(DecisionTreeNode::NodeType::REGULAR_ORDERED,
                                                                             bestAttrib, bestSeparator);
     node->setAlpha(1 - bestGain);
@@ -92,8 +121,8 @@ std::shared_ptr<DecisionTreeNode> AodhaTree::createTreeRec(DataSet& ds, int64_t 
         rightDS.addSample(s);
       }
     }
-    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, minGain));
-    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, minGain));
+    node->addLeftChild(createTreeRec(leftDS, height - 1, minLeaf, minGain, useNominalBinary));
+    node->addRightChild(createTreeRec(rightDS, height - 1, minLeaf, minGain, useNominalBinary));
     return node;
   }
 }
@@ -116,28 +145,83 @@ bool AodhaTree::isAllSameClass(DataSet& ds) {
 
 
 AodhaTree::AttribResult AodhaTree::calcAttribGain(DataSet& ds, int64_t attribInx,
-                                                  long double parentImp) {
+                                                  long double parentImp,
+                                                  bool useNominalBinary) {
   if (ds.getAttributeType(attribInx) == AttributeType::STRING) {
-    return calcNominalGain(ds, attribInx, parentImp);
+    return calcNominalGain(ds, attribInx, parentImp, useNominalBinary);
   } else {
     return calcNumericGain(ds, attribInx, parentImp);
   }
 }
 
 
-AodhaTree::AttribResult AodhaTree::calcNominalGain(DataSet& ds, int64_t attribInx, long double parentImp) {
-  long double impurity = 0;
-  if (ds.samples_.size() > 0) {
-    for (int i = 0; i < ds.getAttributeSize(attribInx); i++) {
-      auto subDS = ds.getSubDataSet(attribInx, i);
-      impurity += (subDS.samples_.size() / ((long double)ds.samples_.size())) * calcImpurity(subDS);
+AodhaTree::AttribResult AodhaTree::calcNominalGain(DataSet& ds, int64_t attribInx,
+                                                   long double parentImp, bool useNominalBinary) {
+  AttribResult ans;
+
+  if (useNominalBinary) {
+    ImpSums allSums;
+    std::vector<ImpSums> subSums(ds.getAttributeSize(attribInx));
+    std::vector<int64_t> totSamples(ds.getAttributeSize(attribInx), 0);
+
+    for (auto s : ds.samples_) {
+      totSamples[s->inxValue_[attribInx]]++;
+
+      long double benefit0 = normalizedValue(s->benefit_[0]);
+      long double benefit1 = normalizedValue(s->benefit_[1]);
+
+      subSums[s->inxValue_[attribInx]].sumS += std::abs(benefit0 - benefit1);
+      allSums.sumS += std::abs(benefit0 - benefit1);
+
+      if (CompareUtils::compare(benefit0, benefit1) > 0) {
+        subSums[s->inxValue_[attribInx]].sumS0 += benefit0 - benefit1;
+        subSums[s->inxValue_[attribInx]].sumSqS0 += (benefit0 - benefit1) * (benefit0 - benefit1);
+        allSums.sumS0 += benefit0 - benefit1;
+        allSums.sumSqS0 += (benefit0 - benefit1) * (benefit0 - benefit1);
+      }
+      else {
+        subSums[s->inxValue_[attribInx]].sumS1 += benefit1 - benefit0;
+        subSums[s->inxValue_[attribInx]].sumSqS1 += (benefit1 - benefit0) * (benefit1 - benefit0);
+        allSums.sumS1 += benefit1 - benefit0;
+        allSums.sumSqS1 += (benefit1 - benefit0) * (benefit1 - benefit0);
+      }
+    }
+
+    ans.impurity = parentImp;
+    ans.gain = 0;
+    ans.separator = -1;
+    for (int64_t j = 0; j < ds.getAttributeSize(attribInx); j++) {
+      long double impLeft = applyFormula(subSums[j].sumS,
+                                         subSums[j].sumS0,
+                                         subSums[j].sumS1,
+                                         subSums[j].sumSqS0,
+                                         subSums[j].sumSqS1);
+      long double impRight = applyFormula(allSums.sumS - subSums[j].sumS,
+                                          allSums.sumS0 - subSums[j].sumS0,
+                                          allSums.sumS1 - subSums[j].sumS1,
+                                          allSums.sumSqS0 - subSums[j].sumSqS0,
+                                          allSums.sumSqS1 - subSums[j].sumSqS1);
+      long double impurity = impLeft * (totSamples[j] / ((long double)ds.samples_.size()))
+                             + impRight * ((ds.samples_.size() - totSamples[j]) / ((long double)ds.samples_.size()));
+      if (ans.separator == -1 || CompareUtils::compare(ans.impurity, impurity) > 0) {
+        ans.impurity = impurity;
+        ans.gain = parentImp - impurity;
+        ans.separator = j;
+      }
     }
   }
-
-  AttribResult ans;
-  ans.impurity = impurity;
-  ans.gain = parentImp - impurity;
-  ans.separator = -1;
+  else {
+    long double impurity = 0;
+    if (ds.samples_.size() > 0) {
+      for (int i = 0; i < ds.getAttributeSize(attribInx); i++) {
+        auto subDS = ds.getSubDataSet(attribInx, i);
+        impurity += (subDS.samples_.size() / ((long double)ds.samples_.size())) * calcImpurity(subDS);
+      }
+    }
+    ans.impurity = impurity;
+    ans.gain = parentImp - impurity;
+    ans.separator = -1;
+  }
   return ans;
 }
 
@@ -159,13 +243,6 @@ AodhaTree::AttribResult AodhaTree::calcNumericGain(DataSet& ds, int64_t attribIn
     [](const Order& a, const Order& b) { return a.attribValue < b.attribValue; });
 
   // Calculate the sums for left and right children
-  struct ImpSums {
-    long double sumS = 0;
-    long double sumS0 = 0;
-    long double sumS1 = 0;
-    long double sumSqS0 = 0;
-    long double sumSqS1 = 0;
-  };
   ImpSums leftSums;
   ImpSums rightSums;
   for (auto s : ds.samples_) {

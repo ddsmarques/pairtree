@@ -10,6 +10,7 @@ class ConfigAodha : public ConfigTree {
 public:
   int64_t minLeaf;
   double minGain;
+  bool useNominalBinary;
   std::vector<long double> alphas;
   std::vector<int64_t> minSamples;
 };
@@ -25,12 +26,22 @@ private:
     long double gain;
     int64_t separator;
   };
+  struct ImpSums {
+    long double sumS = 0;
+    long double sumS0 = 0;
+    long double sumS1 = 0;
+    long double sumSqS0 = 0;
+    long double sumSqS1 = 0;
+  };
   
   std::shared_ptr<DecisionTreeNode> createTreeRec(DataSet& ds, int64_t height,
-                                                  int64_t minLeaf, long double minGain);
+                                                  int64_t minLeaf, long double minGain,
+                                                  bool useNominalBinary);
   bool isAllSameClass(DataSet& ds);
-  AttribResult calcAttribGain(DataSet& ds, int64_t attribInx, long double parentImp);
-  AttribResult calcNominalGain(DataSet& ds, int64_t attribInx, long double parentImp);
+  AttribResult calcAttribGain(DataSet& ds, int64_t attribInx, long double parentImp,
+                              bool useNominalBinary);
+  AttribResult calcNominalGain(DataSet& ds, int64_t attribInx, long double parentImp,
+                               bool useNominalBinary);
   AttribResult calcNumericGain(DataSet& ds, int64_t attribInx, long double parentImp);
   std::shared_ptr<DecisionTreeNode> createLeaf(DataSet& ds);
   long double calcImpurity(DataSet& ds);
