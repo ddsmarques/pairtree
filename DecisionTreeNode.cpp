@@ -73,8 +73,18 @@ int64_t DecisionTreeNode::getSize() {
     return 1 + leftSize + rightSize;
   } else {
     int64_t size = 1;
-    for (auto it = children_.begin(); it != children_.end(); it++) {
-      size += it->second->getSize();
+    std::map<int64_t, std::shared_ptr<DecisionTreeNode>>::iterator it, itPrev;
+    for (it = children_.begin(); it != children_.end(); it++) {
+      bool found = false;
+      for (itPrev = children_.begin(); itPrev != it; itPrev++) {
+        if (it->second == itPrev->second) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        size += it->second->getSize();
+      }
     }
     return size;
   }
