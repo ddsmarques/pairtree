@@ -187,7 +187,8 @@ PairTree::AttribResult PairTree::testNominal(DataSet& ds, int64_t attribInx,
   // If wants to use binary splits then should test from -1 to attribSize.
   // Else only needs to test boxZero = -1
   int64_t maxSplits = useNominalBinary ? attribSize : 0;
-  for (int64_t i = -1; i < maxSplits; i++) {
+  int64_t startSplit = useNominalBinary ? 0 : -1;
+  for (int64_t i = startSplit; i < maxSplits; i++) {
     int64_t boxZero = i;
     std::function<int64_t(int64_t)> valueBox = [boxZero](int64_t inxValue) {
       if (boxZero < 0) {
