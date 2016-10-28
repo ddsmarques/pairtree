@@ -331,8 +331,12 @@ Trainer::TreeResult Trainer::runAlphaSamplesTrees(std::shared_ptr<ConfigTrain>& 
   treeResult.alphaXsamples = std::vector<std::vector<long double>>(alphas.size(),
                                                                    std::vector<long double>(minSamples.size()));
   Tester tester;
+  auto start = std::chrono::system_clock::now();
   std::shared_ptr<ExtrasTreeNode> fullTree = std::static_pointer_cast<ExtrasTreeNode>(
                                               config->trees[treeInx]->createTree(trainDS, config->configTrees[treeInx]));
+  int64_t countMilliSeconds = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
+  Logger::log() << "Time to create tree " << countMilliSeconds << " ms";
+
   for (int i = 0; i < alphas.size(); i++) {
     auto alpha = alphas[i];
     for (int j = 0; j < minSamples.size(); j++) {
