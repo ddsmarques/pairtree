@@ -1,6 +1,7 @@
+// Copyright (c) 2018 Daniel dos Santos Marques <danielsmarques7@gmail.com>
+// License: BSD 3 clause
+//
 // This module represents an attribute which can assume one of 3 types: INTEGER, DOUBLE and STRING.
-// 
-// Author: ddsmarques
 //
 
 #pragma once

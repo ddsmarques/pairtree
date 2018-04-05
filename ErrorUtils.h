@@ -1,7 +1,9 @@
-// This module implements functions to help dealing with error messages.
-// 
-// Author: ddsmarques
+// Copyright (c) 2018 Daniel dos Santos Marques <danielsmarques7@gmail.com>
+// License: BSD 3 clause
 //
+// This module implements functions to help dealing with error messages.
+//
+
 #pragma once
 #include <string>
 

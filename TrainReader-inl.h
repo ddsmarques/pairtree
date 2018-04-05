@@ -1,3 +1,5 @@
+// Copyright (c) 2018 Daniel dos Santos Marques <danielsmarques7@gmail.com>
+// License: BSD 3 clause
 
 template <typename T>
 T TrainReader::getVar(luabridge::lua_State* L, std::string name) {

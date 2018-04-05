@@ -1,7 +1,9 @@
-// This module represents a data set. A data set has attributes and samples.
-// 
-// Author: ddsmarques
+// Copyright (c) 2018 Daniel dos Santos Marques <danielsmarques7@gmail.com>
+// License: BSD 3 clause
 //
+// This module represents a data set. A data set has attributes and samples.
+//
+
 #pragma once
 #include <list>
 #include <vector>

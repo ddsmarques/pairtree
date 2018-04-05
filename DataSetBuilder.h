@@ -1,6 +1,7 @@
+// Copyright (c) 2018 Daniel dos Santos Marques <danielsmarques7@gmail.com>
+// License: BSD 3 clause
+//
 // This module implements the creation of a dataset based on a CSV file.
-// 
-// Author: ddsmarques
 //
 
 #pragma once

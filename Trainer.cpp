@@ -1,3 +1,6 @@
+// Copyright (c) 2018 Daniel dos Santos Marques <danielsmarques7@gmail.com>
+// License: BSD 3 clause
+
 #include "Trainer.h"
 
 #include "AodhaTree.h"
