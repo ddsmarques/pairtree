@@ -19,7 +19,6 @@
 #include <fstream>
 #include <random>
 
-
 void Trainer::train(std::string fileName) {
   TrainReader reader;
   std::shared_ptr<ConfigTrain> config = reader.read(fileName);

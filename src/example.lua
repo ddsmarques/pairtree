@@ -2,10 +2,10 @@
 -- License: BSD 3 clause
 
 name = "trainName"
-output = "C:\\Users\\Daniel\\Documents\\tmp\\"
+output = ""
 
 dataset = {
-	filename = "C:\\\\Users\\Daniel\\Documents\\DataSets\\xor_fake.csv",
+	filename = "..\\..\\..\\..\\datasets\\xor_example.csv",
 	classColStart = -1
 }
 
@@ -25,25 +25,25 @@ trainMode = {
 --]]
 trees = {}
 trees[0] = {
-	name = "pinename",
-	treeType = "pine",
-	height = 2,
-	solver = "CONTINUOUS"
-}
-
-trees[1] = {
 	name = "greedyname",
 	treeType = "greedy",
+  useNominalBinary = false,
+  minSamples = {},
+  alphas = {},
   percentiles = 100,
   minLeaf = 30,
   minGain = 0.01,
 	height = 2
 }
-trees[2] = {
+trees[0].alphas[0] = 1
+trees[0].minSamples[0] = 1
+
+trees[1] = {
 	name = "pairname",
 	treeType = "pair",
   useScore = false,
   useNominalBinary = false,
+  boundOption = 'DIFF',
   maxBound = 1,
   alphas = {},
   minSamples = {},
@@ -52,9 +52,9 @@ trees[2] = {
 }
 i = 0
 for alpha=0.1,1,0.05 do
-  trees[2].alphas[i] = alpha
+  trees[1].alphas[i] = alpha
   i = i + 1
 end
-trees[2].minSamples[0] = 30
-trees[2].minSamples[1] = 50
-trees[2].minSamples[2] = 100
+trees[1].minSamples[0] = 30
+trees[1].minSamples[1] = 50
+trees[1].minSamples[2] = 100
